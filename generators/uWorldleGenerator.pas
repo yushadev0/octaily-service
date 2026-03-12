@@ -159,7 +159,6 @@ begin
   Result := TJSONObject.Create;
   Result.AddPair('success', TJSONBool.Create(True));
   Result.AddPair('game', FGameName);
-  Result.AddPair('target_iso', FTargetCountry.ISO);
 end;
 
 function TOctailyWorldleGenerator.CheckGuess(AGuess: string): TJSONObject;

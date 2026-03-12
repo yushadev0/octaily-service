@@ -3,11 +3,11 @@
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
+  System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
-  System.JSON, // JSON işlemleri için
-  Horse,       // API Framework'ümüz
-  uOctailyManager; // Orkestra Şefimiz
+  System.JSON, Horse, uOctailyManager, System.Net.HttpClient,
+  System.Net.URLClient, System.Net.HttpClientComponent, Horse.CORS;
 
 type
   TForm1 = class(TForm)
@@ -35,7 +35,7 @@ begin
     ShowMessage('Sunucu zaten çalışıyor!');
     Exit;
   end;
-
+  THorse.Use(CORS);
   // --- ROUTE 1: GÜNLÜK BULMACAYI GETİR ---
   // Tarayıcıdan veya mobilden oyun istendiğinde bu blok çalışır
   THorse.Get('/api/game/:name',
