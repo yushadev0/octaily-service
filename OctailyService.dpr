@@ -6,7 +6,9 @@ uses
   uBaseGenerator in 'generators\uBaseGenerator.pas',
   uWordleGenerator in 'generators\uWordleGenerator.pas',
   uQueensGenerator in 'generators\uQueensGenerator.pas',
-  uNerdleGenerator in 'uNerdleGenerator.pas';
+  uZipGenerator in 'generators\uZipGenerator.pas',
+  uNerdleGenerator in 'generators\uNerdleGenerator.pas',
+  uHexleGenerator in 'generators\uHexleGenerator.pas';
 
 {$R *.res}
 

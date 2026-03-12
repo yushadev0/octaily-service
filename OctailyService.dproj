@@ -133,7 +133,9 @@
         <DCCReference Include="generators\uBaseGenerator.pas"/>
         <DCCReference Include="generators\uWordleGenerator.pas"/>
         <DCCReference Include="generators\uQueensGenerator.pas"/>
-        <DCCReference Include="uNerdleGenerator.pas"/>
+        <DCCReference Include="generators\uZipGenerator.pas"/>
+        <DCCReference Include="generators\uNerdleGenerator.pas"/>
+        <DCCReference Include="generators\uHexleGenerator.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

@@ -6,7 +6,8 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
   System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, System.JSON,
-  uBaseGenerator, uWordleGenerator, uQueensGenerator, uNerdleGenerator;
+  uBaseGenerator, uWordleGenerator, uQueensGenerator, uNerdleGenerator,
+  uZipGenerator, uHexleGenerator;
 
 type
   TForm1 = class(TForm)
@@ -15,7 +16,6 @@ type
     Label1: TLabel;
     Edit1: TEdit;
     procedure Button1Click(Sender: TObject);
-    procedure FormCreate(Sender: TObject);
   private
     { Private declarations }
     FWordleGen: TOctailyWordleGenerator;
@@ -33,30 +33,26 @@ implementation
 
 procedure TForm1.Button1Click(Sender: TObject);
 var
-  GuessJSON: TJSONObject;
+  HexGen: TOctailyHexleGenerator;
+  ResultJSON: TJSONObject;
+  I: Integer;
 begin
   Memo1.Clear;
-
-  // Edit1'e yazdığın tahmini gönder (Örn: 12+35=47)
-  GuessJSON := FNerdleGen.CheckGuess(Edit1.Text);
+  HexGen := TOctailyHexleGenerator.Create('hexle_daily');
   try
-    Memo1.Lines.Add('--- NERDLE TAHMİN SONUCU ---');
-    Memo1.Lines.Add(GuessJSON.Format(2));
+    HexGen.GenerateDailyPuzzle;
+    Label1.Caption := 'Hedef Renk: #' + HexGen.DailyHex;
+
+    // Örnek tahmin: "FFFFFF" (Beyaz)
+    ResultJSON := HexGen.CheckGuess(Edit1.Text);
+    try
+      Memo1.Lines.Add(ResultJSON.Format(2));
+    finally
+      ResultJSON.Free;
+    end;
   finally
-    GuessJSON.Free;
+    HexGen.Free;
   end;
-end;
-
-procedure TForm1.FormCreate(Sender: TObject);
-begin
-// Nerdle jeneratörünü başlat (Parametre sadece oyun adı)
-  FNerdleGen := TOctailyNerdleGenerator.Create('nerdle_daily');
-
-  // Günlük denklemi üret
-  FNerdleGen.GenerateDailyPuzzle;
-
-  // Test için gizli denklemi label'da görelim
-  Label1.Caption := 'Gizli Denklem: ' + FNerdleGen.DailyEquation;
 end;
 
 end.
