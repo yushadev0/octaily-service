@@ -13,7 +13,7 @@ Powered by a smart Singleton Manager architecture running in the background, it 
 
 ## Supported Game Engines (Generators)
 
-The system currently supports 7 different "Daily Puzzle" engines:
+The system currently supports 8 different "Daily Puzzle" engines:
 
 * **Wordle (TR & EN):** Classic 5-letter word guessing game powered by a custom dictionary algorithm.
 * **Queens:** Zone control and logical placement on a chessboard.
