@@ -8,7 +8,9 @@ uses
   uQueensGenerator in 'generators\uQueensGenerator.pas',
   uZipGenerator in 'generators\uZipGenerator.pas',
   uNerdleGenerator in 'generators\uNerdleGenerator.pas',
-  uHexleGenerator in 'generators\uHexleGenerator.pas';
+  uHexleGenerator in 'generators\uHexleGenerator.pas',
+  uWorldleGenerator in 'generators\uWorldleGenerator.pas',
+  uDailyBugGenerator in 'generators\uDailyBugGenerator.pas';
 
 {$R *.res}
 
