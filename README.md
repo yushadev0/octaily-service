@@ -1,4 +1,4 @@
-# Octaily API Server
+# Octaily API Service
 
 ![Delphi](https://img.shields.io/badge/Delphi-10.4+-red.svg)
 ![Horse](https://img.shields.io/badge/Framework-Horse-blue.svg)
