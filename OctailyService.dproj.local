@@ -1,16 +1,18 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <BorlandProject>
 	<Transactions>
-    <Transaction>1899.12.30 00:00:00.000.894,C:\Users\yusag\OneDrive\Documents\Embarcadero\Studio\Projects\Unit1.dfm=C:\yusag\PROJECTS\OctailyService\Unit1.dfm</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.349,C:\Users\yusag\OneDrive\Documents\Embarcadero\Studio\Projects\Project1.dproj=C:\yusag\PROJECTS\OctailyService\OctailyService.dproj</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.255,=C:\Users\yusag\OneDrive\Documents\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.435,C:\yusag\PROJECTS\OctailyService\generators\uBaseGenerator.pas=C:\yusag\PROJECTS\OctailyService\Unit2.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.349,C:\yusag\PROJECTS\OctailyService\OctailyService.dproj=C:\Users\yusag\OneDrive\Documents\Embarcadero\Studio\Projects\Project1.dproj</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.619,C:\yusag\PROJECTS\OctailyService\Unit2.pas=C:\yusag\PROJECTS\OctailyService\generators\uQueensGenerator.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.887,C:\yusag\PROJECTS\OctailyService\generators\uWordleGenerator.pas=C:\yusag\PROJECTS\OctailyService\Unit2.pas</Transaction>
     <Transaction>1899.12.30 00:00:00.000.276,=C:\Users\yusag\OneDrive\Documents\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.894,C:\Users\yusag\OneDrive\Documents\Embarcadero\Studio\Projects\Unit1.pas=C:\yusag\PROJECTS\OctailyService\Unit1.pas</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.435,C:\yusag\PROJECTS\OctailyService\Unit2.pas=C:\yusag\PROJECTS\OctailyService\generators\uBaseGenerator.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.255,=C:\Users\yusag\OneDrive\Documents\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
     <Transaction>1899.12.30 00:00:00.000.349,=C:\yusag\PROJECTS\OctailyService\Unit2.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.894,C:\yusag\PROJECTS\OctailyService\Unit1.dfm=C:\Users\yusag\OneDrive\Documents\Embarcadero\Studio\Projects\Unit1.dfm</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.894,C:\yusag\PROJECTS\OctailyService\Unit1.pas=C:\Users\yusag\OneDrive\Documents\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.068,=C:\yusag\PROJECTS\OctailyService\Unit2.pas</Transaction>
     <Transaction>1899.12.30 00:00:00.000.690,=C:\yusag\PROJECTS\OctailyService\Unit2.pas</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.887,C:\yusag\PROJECTS\OctailyService\Unit2.pas=C:\yusag\PROJECTS\OctailyService\generators\uWordleGenerator.pas</Transaction>
-    <Transaction>2026.03.12 21:55:35.068,=C:\yusag\PROJECTS\OctailyService\Unit2.pas</Transaction>
-    <Transaction>2026.03.12 21:55:48.619,C:\yusag\PROJECTS\OctailyService\generators\uQueensGenerator.pas=C:\yusag\PROJECTS\OctailyService\Unit2.pas</Transaction>
+    <Transaction>2026.03.12 22:15:58.009,=C:\yusag\PROJECTS\OctailyService\Unit2.pas</Transaction>
+    <Transaction>2026.03.12 22:16:03.248,C:\yusag\PROJECTS\OctailyService\uNerdleGenerator.pas=C:\yusag\PROJECTS\OctailyService\Unit2.pas</Transaction>
   </Transactions>
 </BorlandProject>

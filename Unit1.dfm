@@ -11,7 +11,15 @@ object Form1: TForm1
   Font.Name = 'Segoe UI'
   Font.Style = []
   Position = poScreenCenter
+  OnCreate = FormCreate
   TextHeight = 15
+  object Label1: TLabel
+    Left = 768
+    Top = 344
+    Width = 34
+    Height = 15
+    Caption = 'Label1'
+  end
   object Memo1: TMemo
     Left = 8
     Top = 8
@@ -30,5 +38,13 @@ object Form1: TForm1
     Caption = 'Button1'
     TabOrder = 1
     OnClick = Button1Click
+  end
+  object Edit1: TEdit
+    Left = 786
+    Top = 376
+    Width = 121
+    Height = 23
+    TabOrder = 2
+    Text = 'Edit1'
   end
 end

@@ -5,7 +5,8 @@ uses
   Unit1 in 'Unit1.pas' {Form1},
   uBaseGenerator in 'generators\uBaseGenerator.pas',
   uWordleGenerator in 'generators\uWordleGenerator.pas',
-  uQueensGenerator in 'generators\uQueensGenerator.pas';
+  uQueensGenerator in 'generators\uQueensGenerator.pas',
+  uNerdleGenerator in 'uNerdleGenerator.pas';
 
 {$R *.res}
 
