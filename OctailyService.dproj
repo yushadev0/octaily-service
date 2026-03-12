@@ -137,7 +137,8 @@
         <DCCReference Include="generators\uNerdleGenerator.pas"/>
         <DCCReference Include="generators\uHexleGenerator.pas"/>
         <DCCReference Include="generators\uWorldleGenerator.pas"/>
-        <DCCReference Include="generators\uDailyBugGenerator.pas"/>
+        <DCCReference Include="generators\uSudokuGenerator.pas"/>
+        <DCCReference Include="uOctailyManager.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

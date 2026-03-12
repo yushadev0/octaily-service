@@ -10,7 +10,8 @@ uses
   uNerdleGenerator in 'generators\uNerdleGenerator.pas',
   uHexleGenerator in 'generators\uHexleGenerator.pas',
   uWorldleGenerator in 'generators\uWorldleGenerator.pas',
-  uDailyBugGenerator in 'generators\uDailyBugGenerator.pas';
+  uSudokuGenerator in 'generators\uSudokuGenerator.pas',
+  uOctailyManager in 'uOctailyManager.pas';
 
 {$R *.res}
 

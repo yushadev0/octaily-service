@@ -11,8 +11,8 @@ type
     FGrid: array[0..8, 0..8] of Integer;       // Kullanıcıya gönderilecek (Boşluklu)
     FSolution: array[0..8, 0..8] of Integer;   // Gizli çözüm anahtarı
 
-    function IsSafe(Row, Col, Num: Integer; const AGrid: array of array of Integer): Boolean; overload;
-    function IsSafe(Row, Col, Num: Integer): Boolean; overload; // FSolution üzerinde kontrol
+    // Fazlalık olan overload kaldırıldı, sadece gerekli olan kaldı
+    function IsSafe(Row, Col, Num: Integer): Boolean;
     function Solve(Row, Col: Integer): Boolean;
     procedure RemoveDigits(Count: Integer);
   public
@@ -40,11 +40,11 @@ begin
     if (FSolution[Row, I] = Num) or (FSolution[I, Col] = Num) then Exit(False);
 
   // 3x3 Blok kontrolü
-  StartRow := Row - Row mod 3;
-  StartCol := Col - Col mod 3;
+  StartRow := (Row div 3) * 3;
+  StartCol := (Col div 3) * 3;
   for I := 0 to 2 do
     for J := 0 to 2 do
-      if FSolution[I + StartRow, J + StartCol] = Num then Exit(False);
+      if FSolution[StartRow + I, StartCol + J] = Num then Exit(False);
 
   Result := True;
 end;
@@ -53,12 +53,11 @@ function TOctailySudokuGenerator.Solve(Row, Col: Integer): Boolean;
 var
   Num: Integer;
 begin
-  // Tablo bitti mi?
   if (Row = 8) and (Col = 9) then Exit(True);
   if Col = 9 then begin Row := Row + 1; Col := 0; end;
+
   if FSolution[Row, Col] <> 0 then Exit(Solve(Row, Col + 1));
 
-  // 1-9 arası rakamları dene
   for Num := 1 to 9 do
   begin
     if IsSafe(Row, Col, Num) then
@@ -73,30 +72,35 @@ end;
 
 procedure TOctailySudokuGenerator.GenerateDailyPuzzle;
 var
-  I, J, R: Integer;
+  I, J, R, TryCount: Integer;
 begin
   Randomize;
   // 1. Tabloyu temizle
   for I := 0 to 8 do
     for J := 0 to 8 do FSolution[I, J] := 0;
 
-  // 2. İlk satıra rastgelelik kat (Her gün farklı bir tablo için)
-  for I := 0 to 8 do
+  // 2. İlk satırı kurallara uygun şekilde rastgele doldur
+  TryCount := 0;
+  I := 0;
+  while (I < 9) and (TryCount < 100) do
   begin
     R := Random(9) + 1;
-    // Basit bir kontrolle ilk satırı dolduruyoruz
-    FSolution[0, I] := R;
+    if IsSafe(0, I, R) then
+    begin
+      FSolution[0, I] := R;
+      Inc(I);
+    end;
+    Inc(TryCount);
   end;
 
-  // 3. Geçerli bir tam tablo oluştur
+  // 3. Geri kalan tabloyu doldur
   Solve(0, 0);
 
-  // 4. Çözümü FGrid'e kopyala ve içinden rakam sil
+  // 4. Çözümü kopyala ve içinden rakam sil
   for I := 0 to 8 do
     for J := 0 to 8 do FGrid[I, J] := FSolution[I, J];
 
-  // Zorluk: 45 hücreyi boşalt (Orta/Zor seviye)
-  RemoveDigits(45);
+  RemoveDigits(45); // Orta zorluk
   FGameDate := Date;
 end;
 
@@ -152,13 +156,13 @@ begin
       Exit;
     end;
 
-    // Kullanıcının gönderdiği 9x9 tabloyu çözümle karşılaştır
     for R := 0 to 8 do
     begin
       RowArr := JSONGuess.Items[R] as TJSONArray;
       for C := 0 to 8 do
       begin
-        Val := RowArr.Items[C].Value.ToInteger;
+        // JSON parsing kısmını daha güvenli hale getirdik
+        Val := RowArr.Items[C].GetValue<Integer>;
         if Val <> FSolution[R, C] then
         begin
           Result.AddPair('success', TJSONBool.Create(False));
@@ -171,8 +175,11 @@ begin
     Result.AddPair('success', TJSONBool.Create(True));
     Result.AddPair('message', 'Tebrikler, Sudoku tamamlandı!');
   except
-    Result.AddPair('success', TJSONBool.Create(False));
-    Result.AddPair('error', 'Kontrol sırasında hata oluştu');
+    on E: Exception do
+    begin
+      Result.AddPair('success', TJSONBool.Create(False));
+      Result.AddPair('error', 'Kontrol hatası: ' + E.Message);
+    end;
   end;
 end;
 

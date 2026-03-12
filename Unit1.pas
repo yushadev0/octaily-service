@@ -3,22 +3,19 @@
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
-  System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, System.JSON,
-  uBaseGenerator, uWordleGenerator, uQueensGenerator, uNerdleGenerator,
-  uZipGenerator, uHexleGenerator, uWorldleGenerator;
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
+  System.JSON, // JSON işlemleri için
+  Horse,       // API Framework'ümüz
+  uOctailyManager; // Orkestra Şefimiz
 
 type
   TForm1 = class(TForm)
-    Memo1: TMemo;
-    Label1: TLabel;
-    Edit1: TEdit;
-    Button1: TButton;
+    btnStartServer: TButton;
+    Memo1: TMemo; // İstekleri veya durumu loglamak istersen
+    procedure btnStartServerClick(Sender: TObject);
   private
     { Private declarations }
-    FWordleGen: TOctailyWordleGenerator;
-    FNerdleGen: TOctailyNerdleGenerator;
   public
     { Public declarations }
   end;
@@ -29,5 +26,69 @@ var
 implementation
 
 {$R *.dfm}
+
+procedure TForm1.btnStartServerClick(Sender: TObject);
+begin
+  // Eğer sunucu zaten çalışıyorsa tekrar başlatmayı engelle
+  if THorse.IsRunning then
+  begin
+    ShowMessage('Sunucu zaten çalışıyor!');
+    Exit;
+  end;
+
+  // --- ROUTE 1: GÜNLÜK BULMACAYI GETİR ---
+  // Tarayıcıdan veya mobilden oyun istendiğinde bu blok çalışır
+  THorse.Get('/api/game/:name',
+    procedure(Req: THorseRequest; Res: THorseResponse)
+    var
+      GameName: string;
+      JSONResponse: TJSONObject;
+    begin
+      GameName := Req.Params['name']; // URL'den oyun adını al
+
+      JSONResponse := TOctailyManager.Instance.GetPuzzle(GameName);
+      try
+        Res.Send(JSONResponse.ToJSON).ContentType('application/json');
+      finally
+        JSONResponse.Free;
+      end;
+    end);
+
+  // --- ROUTE 2: TAHMİN GÖNDER VE KONTROL ET ---
+  // Kullanıcı kelime, koordinat veya JSON gönderdiğinde bu blok çalışır
+  THorse.Post('/api/guess/:name',
+    procedure(Req: THorseRequest; Res: THorseResponse)
+    var
+      GameName, GuessData: string;
+      JSONResponse: TJSONObject;
+    begin
+      GameName := Req.Params['name'];
+      GuessData := Req.Body; // Gönderilen veriyi al
+
+      JSONResponse := TOctailyManager.Instance.PostGuess(GameName, GuessData);
+      try
+        Res.Send(JSONResponse.ToJSON).ContentType('application/json');
+      finally
+        JSONResponse.Free;
+      end;
+    end);
+
+  // --- SUNUCUYU AYAĞA KALDIR ---
+  // 9000 portundan dinlemeye başlıyoruz
+  THorse.Listen(9000,
+    procedure
+    begin
+      // Bu kısım sunucu başarıyla başladığında tetiklenir
+      TThread.Synchronize(nil,
+        procedure
+        begin
+          Memo1.Lines.Add('Octaily API Sunucusu Başladı!');
+          Memo1.Lines.Add('Port: 9000');
+          Memo1.Lines.Add('Test için tarayıcıda şunu açın:');
+          Memo1.Lines.Add('http://localhost:9000/api/game/wordle_tr');
+          btnStartServer.Enabled := False; // Yanlışlıkla tekrar basılmasın
+        end);
+    end);
+end;
 
 end.
