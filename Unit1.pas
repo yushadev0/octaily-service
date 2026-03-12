@@ -1,0 +1,71 @@
+﻿unit Unit1;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
+  System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, System.JSON, uBaseGenerator,
+  uWordleGenerator;
+
+type
+  TForm1 = class(TForm)
+    Button1: TButton;
+    Memo1: TMemo;
+    procedure Button1Click(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  Form1: TForm1;
+
+implementation
+
+{$R *.dfm}
+
+procedure TForm1.Button1Click(Sender: TObject);
+var
+  WordleGen: TOctailyWordleGenerator;
+  InitJSON, GuessJSON: TJSONObject;
+  DataPath: string;
+begin
+  Memo1.Clear;
+  // Kelime dosyamızın yolunu belirtiyoruz
+  DataPath := ExtractFilePath(ParamStr(0)) + 'data\wordle_tr.txt';
+
+  // Motoru Wordle TR için başlatıyoruz
+  WordleGen := TOctailyWordleGenerator.Create('wordle_tr', DataPath);
+  try
+    // 1. Gece 00:00 simülasyonu: Rastgele kelimeyi seç!
+    WordleGen.GenerateDailyPuzzle;
+
+    // 2. İstemci uygulamayı açtı ve veriyi çekti (GET İsteği)
+    InitJSON := WordleGen.GetDailyPuzzleJSON;
+    try
+      Memo1.Lines.Add('--- 1. API BAŞLANGIÇ YANITI ---');
+      // Format(2) komutu JSON'u okunabilir (girintili) şekilde yazdırır
+      Memo1.Lines.Add(InitJSON.Format(2));
+    finally
+      InitJSON.Free;
+    end;
+
+    // 3. İstemci ilk tahminini gönderdi (POST İsteği: "KALEM")
+    GuessJSON := WordleGen.CheckGuess('KALEM');
+    try
+      Memo1.Lines.Add('');
+      Memo1.Lines.Add('--- 2. TAHMİN KONTROL YANITI (KALEM) ---');
+      Memo1.Lines.Add(GuessJSON.Format(2));
+    finally
+      GuessJSON.Free;
+    end;
+
+  finally
+    // İşimiz bitince hafızayı temizliyoruz (Memory Leak olmaması için)
+    WordleGen.Free;
+  end;
+end;
+
+end.
