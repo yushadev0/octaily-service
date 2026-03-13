@@ -11,6 +11,7 @@ type
     HEX_CHARS = '0123456789ABCDEF';
   private
     FDailyHex: string; // Örn: "3A8C55"
+    FPuzzleID: string; // Senkronizasyon için ID eklendi
     function GetHexValue(AChar: Char): Integer;
 
   public
@@ -34,13 +35,12 @@ end;
 
 function TOctailyHexleGenerator.GetHexValue(AChar: Char): Integer;
 begin
-  // Karakterin HEX dizisindeki yerini döndürür (0-15 arası)
   Result := Pos(UpperCase(AChar), HEX_CHARS) - 1;
 end;
 
 function TOctailyHexleGenerator.GetDebugAnswer: string;
 begin
-  Result := FDailyHex; // Hedef kelimeyi doğrudan döndür
+  Result := FDailyHex;
 end;
 
 procedure TOctailyHexleGenerator.GenerateDailyPuzzle;
@@ -49,20 +49,31 @@ var
 begin
   Randomize;
   FDailyHex := '';
-  // 6 haneli rastgele bir HEX kodu oluştur
+
   for I := 1 to 6 do
     FDailyHex := FDailyHex + HEX_CHARS[Random(16) + 1];
 
+  FPuzzleID := FormatDateTime('yyyymmdd_hhnnss', Now);
   FGameDate := Date;
 end;
 
 function TOctailyHexleGenerator.GetDailyPuzzleJSON: TJSONObject;
+var
+  R, G, B: Integer;
 begin
   Result := TJSONObject.Create;
   Result.AddPair('success', TJSONBool.Create(True));
   Result.AddPair('game', FGameName);
-  Result.AddPair('message',
-    'Renk kodu hazir, 6 haneli HEX tahminini bekliyorum!');
+  Result.AddPair('id', FPuzzleID);
+
+  // HİLE KORUMASI: Cevap olan HEX kodunu parçalayıp RGB'ye çeviriyoruz
+  // Böylece JSON içinde "3A8C55" yazmayacak, "rgb(58, 140, 85)" yazacak.
+  R := StrToInt('$' + Copy(FDailyHex, 1, 2));
+  G := StrToInt('$' + Copy(FDailyHex, 3, 2));
+  B := StrToInt('$' + Copy(FDailyHex, 5, 2));
+
+  Result.AddPair('target_color', Format('rgb(%d, %d, %d)', [R, G, B]));
+  Result.AddPair('message', 'Renk kodu hazir, 6 haneli HEX tahminini bekliyorum!');
 end;
 
 function TOctailyHexleGenerator.CheckGuess(AGuess: string): TJSONObject;
@@ -95,7 +106,6 @@ begin
     GuessVal := GetHexValue(GuessChar);
     TargetVal := GetHexValue(TargetChar);
 
-    // Aradaki farkı hesapla (Hedef - Tahmin)
     Diff := TargetVal - GuessVal;
 
     CharObj := TJSONObject.Create;
@@ -105,19 +115,17 @@ begin
       CharObj.AddPair('status', 'correct')
     else if Diff > 0 then
     begin
-      // Hedef daha yukarıda
       if Diff > 3 then
-        CharObj.AddPair('status', 'very_higher') // Mesafe uzak (3'ten büyük)
+        CharObj.AddPair('status', 'very_higher')
       else
-        CharObj.AddPair('status', 'higher'); // Mesafe yakın
+        CharObj.AddPair('status', 'higher');
     end
     else
     begin
-      // Hedef daha aşağıda
       if Abs(Diff) > 3 then
-        CharObj.AddPair('status', 'very_lower') // Mesafe uzak
+        CharObj.AddPair('status', 'very_lower')
       else
-        CharObj.AddPair('status', 'lower'); // Mesafe yakın
+        CharObj.AddPair('status', 'lower');
     end;
 
     JSONArray.AddElement(CharObj);

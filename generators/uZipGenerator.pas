@@ -291,8 +291,8 @@ end;
 function TOctailyZipGenerator.CheckGuess(AGuess: string): TJSONObject;
 var
   JSONGuess: TJSONArray;
-  P, PrevP: TPoint;
-  I, ExpectedWaypoint: Integer;
+  P, PrevP, LastP: TPoint;
+  I, ExpectedWaypoint, MaxWaypoint, R, C: Integer;
   GridVisited: array of array of Boolean;
 begin
   Result := TJSONObject.Create;
@@ -307,6 +307,7 @@ begin
       Exit;
     end;
 
+    // 1. KURAL: Tüm hücreler gezilmeli
     if JSONGuess.Count <> (FGridSize * FGridSize) then
     begin
       Result.AddPair('success', TJSONBool.Create(False));
@@ -314,12 +315,30 @@ begin
       Exit;
     end;
 
+    // EN BÜYÜK DURAĞI (HEDEFİ) BUL:
+    MaxWaypoint := 0;
+    for R := 0 to FGridSize - 1 do
+      for C := 0 to FGridSize - 1 do
+        if FGridNumbers[R, C] > MaxWaypoint then
+          MaxWaypoint := FGridNumbers[R, C];
+
+    // HİLE KONTROLÜ 1: Oyuncu yola kesinlikle 1 numaradan başlamalı!
     P.X := JSONGuess.Items[0].GetValue<Integer>('x');
     P.Y := JSONGuess.Items[0].GetValue<Integer>('y');
     if FGridNumbers[P.X, P.Y] <> 1 then
     begin
       Result.AddPair('success', TJSONBool.Create(False));
       Result.AddPair('error', 'Yola 1 numaradan başlamalısınız!');
+      Exit;
+    end;
+
+    // HİLE KONTROLÜ 2: Oyuncu yolu KESİNLİKLE SON DURAKTA bitirmeli!
+    LastP.X := JSONGuess.Items[JSONGuess.Count - 1].GetValue<Integer>('x');
+    LastP.Y := JSONGuess.Items[JSONGuess.Count - 1].GetValue<Integer>('y');
+    if FGridNumbers[LastP.X, LastP.Y] <> MaxWaypoint then
+    begin
+      Result.AddPair('success', TJSONBool.Create(False));
+      Result.AddPair('error', 'Yolunuz tam olarak son durakta bitmelidir!');
       Exit;
     end;
 
