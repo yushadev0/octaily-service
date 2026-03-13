@@ -8,7 +8,8 @@ uses
 
 type
   TCountry = record
-    Name: string;      // Normalize edilmiş isim (Örn: TURKIYE)
+    Name: string;
+    NameTR: string;       // Normalize edilmiş Türkçe isim
     OriginalName: string; // Orijinal isim (Gerektiğinde göstermek için)
     Lat, Lon: Double;
     ISO: string;
@@ -22,7 +23,6 @@ type
     function CalculateDistance(Lat1, Lon1, Lat2, Lon2: Double): Double;
     function CalculateBearing(Lat1, Lon1, Lat2, Lon2: Double): Double;
     function GetDirection(Bearing: Double): string;
-    // Karakterleri (İ, Ü, Ç vb.) İngilizce standartlarına çeken yardımcı fonksiyon
     function NormalizeString(const AStr: string): string;
   public
     constructor Create(AGameName: string); reintroduce;
@@ -53,27 +53,26 @@ end;
 
 function TOctailyWorldleGenerator.NormalizeString(const AStr: string): string;
 begin
-  // Tüm karakterleri büyük harfe çevir ve Türkçe/Aksanlı karakterleri temizle
+  // Tüm karakterleri büyük harfe çevir
   Result := AStr.Trim.ToUpper;
-  Result := Result.Replace('İ', 'I').Replace('Ü', 'U').Replace('Ö', 'O')
-                  .Replace('Ğ', 'G').Replace('Ş', 'S').Replace('Ç', 'C')
-                  .Replace('Â', 'A').Replace('Ê', 'E').Replace('Î', 'I')
-                  .Replace('Ô', 'O').Replace('Û', 'U');
+  // DİKKAT: rfReplaceAll kullanmazsanız sadece İLK harfi değiştirir!
+  Result := Result.Replace('İ', 'I', [rfReplaceAll]).Replace('Ü', 'U', [rfReplaceAll]).Replace('Ö', 'O', [rfReplaceAll])
+                  .Replace('Ğ', 'G', [rfReplaceAll]).Replace('Ş', 'S', [rfReplaceAll]).Replace('Ç', 'C', [rfReplaceAll])
+                  .Replace('Â', 'A', [rfReplaceAll]).Replace('Ê', 'E', [rfReplaceAll]).Replace('Î', 'I', [rfReplaceAll])
+                  .Replace('Ô', 'O', [rfReplaceAll]).Replace('Û', 'U', [rfReplaceAll]);
 end;
 
 procedure TOctailyWorldleGenerator.LoadCountryData;
 var
-  LFilePath: string;
-  LJSONContent: string;
+  LFilePath, LJSONContent, LTempTR: string;
   LJSONArray, LLatLng: TJSONArray;
   LJSONItem: TJSONObject;
   I: Integer;
   C: TCountry;
   LFS: TFormatSettings;
 begin
-  LFS := TFormatSettings.Invariant; // Ondalık nokta (.) için zorunlu
+  LFS := TFormatSettings.Invariant;
 
-  // JSON dosyasının veri (data) klasöründe olduğunu varsayıyoruz
   LFilePath := TPath.Combine(ExtractFilePath(ParamStr(0)), 'data/countries.json');
 
   if not TFile.Exists(LFilePath) then
@@ -89,16 +88,20 @@ begin
     begin
       LJSONItem := LJSONArray.Items[I] as TJSONObject;
 
-      // İsmi hem orijinal hem de arama için normalize edilmiş halde tutuyoruz
       C.OriginalName := LJSONItem.GetValue<TJSONObject>('name').GetValue<string>('common');
       C.Name := NormalizeString(C.OriginalName);
+
+      // JSON'da name_tr alanı olmayan bir ülke gelirse sistem çökmesin diye TryGetValue kullandık
+      if LJSONItem.TryGetValue<string>('name_tr', LTempTR) then
+        C.NameTR := NormalizeString(LTempTR)
+      else
+        C.NameTR := ''; // Eğer yoksa boş bırak
 
       LLatLng := LJSONItem.GetValue<TJSONArray>('latlng');
       if (LLatLng <> nil) and (LLatLng.Count >= 2) then
       begin
         C.Lat := StrToFloat(LLatLng.Items[0].Value, LFS);
         C.Lon := StrToFloat(LLatLng.Items[1].Value, LFS);
-
         C.ISO := LJSONItem.GetValue<string>('cca2');
         FCountries.Add(C);
       end;
@@ -112,7 +115,7 @@ function TOctailyWorldleGenerator.CalculateDistance(Lat1, Lon1, Lat2, Lon2: Doub
 var
   dLat, dLon, a, c_val: Double;
 const
-  R = 6371; // Dünya yarıçapı
+  R = 6371;
 begin
   dLat := DegToRad(Lat2 - Lat1);
   dLon := DegToRad(Lon2 - Lon1);
@@ -159,6 +162,10 @@ begin
   Result := TJSONObject.Create;
   Result.AddPair('success', TJSONBool.Create(True));
   Result.AddPair('game', FGameName);
+
+  // Frontend ülkenin silüetini çizmek isteyeceği için ISO kodunu dönüyoruz
+  if FTargetCountry.ISO <> '' then
+    Result.AddPair('iso', FTargetCountry.ISO.ToLower);
 end;
 
 function TOctailyWorldleGenerator.CheckGuess(AGuess: string): TJSONObject;
@@ -174,9 +181,9 @@ begin
 
   for GuessCountry in FCountries do
   begin
-    // Hem normalize edilmiş isme hem de alternatif isimlere (Turkey/Türkiye) bakabiliriz
+    // HATA BURADAYDI: Hem İngilizce hem Türkçe normalize isimleri kontrol ediyoruz!
     if (GuessCountry.Name = NormalizedGuess) or
-       ((GuessCountry.ISO = 'TR') and (NormalizedGuess = 'TURKEY')) then
+       ((GuessCountry.NameTR <> '') and (GuessCountry.NameTR = NormalizedGuess)) then
     begin
       Found := True;
       Dist := CalculateDistance(GuessCountry.Lat, GuessCountry.Lon,

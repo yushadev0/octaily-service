@@ -83,7 +83,7 @@ begin
         procedure
         begin
           Memo1.Lines.Add('Octaily API Sunucusu Başladı!');
-          Memo1.Lines.Add('Port: 9000');
+          Memo1.Lines.Add('9000 portundan dinleniyor.');
           Memo1.Lines.Add('Test için tarayıcıda şunu açın:');
           Memo1.Lines.Add('http://localhost:9000/api/game/wordle_tr');
           btnStartServer.Enabled := False; // Yanlışlıkla tekrar basılmasın

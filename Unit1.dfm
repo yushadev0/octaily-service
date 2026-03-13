@@ -27,7 +27,7 @@ object Form1: TForm1
     Top = 432
     Width = 155
     Height = 25
-    Caption = 'btnStartServer'
+    Caption = 'Sunucuyu ba'#351'lat'
     TabOrder = 1
     OnClick = btnStartServerClick
   end

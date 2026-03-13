@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Octaily API Tester 🧪</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e1e1e; color: #fff; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: #2d2d2d; padding: 25px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        h2 { color: #4CAF50; border-bottom: 2px solid #4CAF50; padding-bottom: 10px; }
+        select, button, textarea { padding: 10px; margin-top: 10px; border-radius: 5px; border: 1px solid #444; font-size: 16px; width: 100%; box-sizing: border-box; }
+        select, textarea { background: #3d3d3d; color: #fff; }
+        textarea { height: 100px; resize: vertical; font-family: monospace; }
+        button { background-color: #4CAF50; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { background-color: #45a049; }
+        pre { background: #111; padding: 15px; border-radius: 5px; overflow-x: auto; color: #00ff00; border: 1px solid #333; min-height: 100px;}
+        .flex-row { display: flex; gap: 10px; }
+        .flex-row button { flex: 1; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🧩 Octaily API Test Paneli</h2>
+    
+    <label>Oyun Seçin:</label>
+    <select id="gameSelect">
+        <option value="wordle_tr">Wordle TR</option>
+        <option value="wordle_en">Wordle EN</option>
+        <option value="sudoku">Sudoku</option>
+        <option value="queens">Queens</option>
+        <option value="nerdle">Nerdle</option>
+        <option value="zip">Zip</option>
+        <option value="hexle">Hexle</option>
+        <option value="worldle">Worldle</option>
+    </select>
+
+    <div class="flex-row" style="margin-top: 15px;">
+        <button onclick="testGET()" style="background-color: #2196F3;">1. GET: Bulmacayı Çek</button>
+    </div>
+
+    <h3 style="margin-top: 30px; border-bottom: 1px solid #444; padding-bottom: 5px;">Tahmin Gönder (POST)</h3>
+    <textarea id="guessInput" placeholder='Tahmininizi buraya yazın... (Örn: "KALEM" veya [ [0,1,0...], ... ])'></textarea>
+    
+    <div class="flex-row">
+        <button onclick="testPOST()">2. POST: Tahmini Gönder</button>
+    </div>
+
+    <h3 style="margin-top: 30px;">Sunucu Yanıtı (JSON):</h3>
+    <pre id="responseOutput">Sonuç bekleniyor...</pre>
+</div>
+
+<script>
+    // Dün deploy ettiğin canlı sunucu adresin!
+    const BASE_URL = 'http://localhost:9000/api'; 
+
+    async function testGET() {
+        const game = document.getElementById('gameSelect').value;
+        const output = document.getElementById('responseOutput');
+        output.innerText = '⏳ İstek gönderiliyor...';
+        
+        try {
+            const response = await fetch(`${BASE_URL}/game/${game}`);
+            const data = await response.json();
+            output.innerText = JSON.stringify(data, null, 2);
+        } catch (error) {
+            output.innerText = '❌ HATA: ' + error.message + '\n\nNot: API kapalı olabilir veya CORS hatası alıyor olabilirsiniz.';
+        }
+    }
+
+    async function testPOST() {
+        const game = document.getElementById('gameSelect').value;
+        const guess = document.getElementById('guessInput').value;
+        const output = document.getElementById('responseOutput');
+        output.innerText = '⏳ Tahmin sunucuya iletiliyor...';
+        
+        try {
+            const response = await fetch(`${BASE_URL}/guess/${game}`, {
+                method: 'POST',
+                body: guess // Delphi Manager raw string olarak alıyor
+            });
+            const data = await response.json();
+            output.innerText = JSON.stringify(data, null, 2);
+        } catch (error) {
+            output.innerText = '❌ HATA: ' + error.message;
+        }
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,169 @@
+                     <!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Octaily Dashboard</title>
+    <style>
+        :root {
+            --bg-color: #121213;
+            --card-bg: #272729;
+            --text-main: #ffffff;
+            --text-muted: #818384;
+            --accent: #538d4e;
+            --hover-accent: #3a5237;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Header Tasarımı */
+        .header {
+            text-align: center;
+            padding: 40px 20px 20px 20px;
+            width: 100%;
+            border-bottom: 1px solid #3a3a3c;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin: 0;
+            letter-spacing: 2px;
+            font-weight: 800;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            margin-top: 5px;
+            font-size: 1.1rem;
+        }
+
+        /* Grid Yapısı */
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 1000px;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+
+        /* Oyun Kartları */
+        .game-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 25px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+            border: 2px solid transparent;
+        }
+
+        .game-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            border-color: var(--accent);
+            background-color: #2f2f31;
+        }
+
+        .game-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .game-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin: 0 0 8px 0;
+        }
+
+        .game-desc {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>OCTAILY</h1>
+        <p>Günlük Zihin Egzersizleri</p>
+    </div>
+
+    <div class="games-grid">
+        <div class="game-card" onclick="openGame('wordle_tr')">
+            <div class="game-icon">📝</div>
+            <h2 class="game-title">Wordle TR</h2>
+            <p class="game-desc">Türkçe Kelime Avı</p>
+        </div>
+
+        <div class="game-card" onclick="openGame('wordle_en')">
+            <div class="game-icon">🌍</div>
+            <h2 class="game-title">Wordle EN</h2>
+            <p class="game-desc">İngilizce Kelime Avı</p>
+        </div>
+
+        <div class="game-card" onclick="openGame('sudoku')">
+            <div class="game-icon">🔢</div>
+            <h2 class="game-title">Sudoku</h2>
+            <p class="game-desc">9x9 Mantık Kalesi</p>
+        </div>
+
+        <div class="game-card" onclick="openGame('queens')">
+            <div class="game-icon">👑</div>
+            <h2 class="game-title">Queens</h2>
+            <p class="game-desc">Bölge Kontrolü</p>
+        </div>
+
+        <div class="game-card" onclick="openGame('nerdle')">
+            <div class="game-icon">🧮</div>
+            <h2 class="game-title">Nerdle</h2>
+            <p class="game-desc">Matematiksel Denklem</p>
+        </div>
+
+        <div class="game-card" onclick="openGame('zip')">
+            <div class="game-icon">⚡</div>
+            <h2 class="game-title">Zip</h2>
+            <p class="game-desc">Hamilton Yolu</p>
+        </div>
+
+        <div class="game-card" onclick="openGame('hexle')">
+            <div class="game-icon">🎨</div>
+            <h2 class="game-title">Hexle</h2>
+            <p class="game-desc">Renk Kodları (HEX)</p>
+        </div>
+
+        <div class="game-card" onclick="openGame('worldle')">
+            <div class="game-icon">🗺️</div>
+            <h2 class="game-title">Worldle</h2>
+            <p class="game-desc">Coğrafi Mesafe</p>
+        </div>
+    </div>
+
+    <script>
+        // UniGUI'ye tıklanan oyunu bildiren köprü fonksiyon
+        function openGame(gameCode) {
+            if (typeof ajaxRequest !== 'undefined') {
+                // Burada 'MainForm.UniHTMLFrame1' kısmını kendi bileşen ismine göre ayarlayabilirsin
+                // 3. parametre Delphi tarafına gidecek olan veridir.
+                ajaxRequest(MainForm.UniHTMLFrame1, 'GameSelected', ['game=' + gameCode]);
+            } else {
+                console.warn('UniGUI ortamı bulunamadı. Seçilen oyun: ' + gameCode);
+            }
+        }
+    </script>
+
+</body>
+</html>
