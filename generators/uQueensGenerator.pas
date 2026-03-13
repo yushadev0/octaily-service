@@ -6,7 +6,7 @@ uses
   System.SysUtils, System.JSON, System.Generics.Collections, uBaseGenerator;
 
 type
-  TSetOfByte = set of 0 .. 255; // Bunu ekle
+  TSetOfByte = set of 0 .. 255;
 
   TPoint = record
     X, Y: Integer;
@@ -20,6 +20,7 @@ type
     procedure ClearGrid;
     function IsValidPlacement(const APoints: TArray<TPoint>): Boolean;
     function PlaceQueensBacktracking(Row: Integer): Boolean;
+    procedure GrowRegionsOrganically;
   public
     constructor Create(AGameName: string; ASize: Integer = 8); reintroduce;
     procedure GenerateDailyPuzzle; override;
@@ -43,13 +44,10 @@ var
   P: TPoint;
 begin
   Result := '';
-
   for P in FSolution do
   begin
-
     if Result <> '' then
       Result := Result + ', ';
-
     Result := Result + Format('(%d,%d)', [P.X, P.Y]);
   end;
 
@@ -63,157 +61,158 @@ begin
   SetLength(FSolution, 0);
 end;
 
-function TOctailyQueensGenerator.IsValidPlacement(const APoints
-  : TArray<TPoint>): Boolean;
+function TOctailyQueensGenerator.IsValidPlacement(const APoints: TArray<TPoint>): Boolean;
 var
   I, J: Integer;
-  Rows, Cols, Regions: TSetOfByte;
-  // Set kullanarak çakışmaları hızlıca bulacağız
   P1, P2: TPoint;
 begin
   Result := False;
 
-  // 1. Kraliçe sayısı doğru mu? (N x N tahtada N kraliçe olmalı)
-  if Length(APoints) <> FGridSize then
-    Exit;
-
-  // Kontrol için yardımcı kümeleri (set) hazırlayalım (Delphi'de küme kullanımı çok hızlıdır)
-  // Not: Eğer hata alırsan implementation'ın en üstüne 'type TSetOfByte = set of 0..255;' ekleyebilirsin.
+  if Length(APoints) <> FGridSize then Exit;
 
   for I := 0 to High(APoints) do
   begin
     P1 := APoints[I];
 
-    // Sınır kontrolü
-    if (P1.X < 0) or (P1.X >= FGridSize) or (P1.Y < 0) or (P1.Y >= FGridSize)
-    then
-      Exit;
+    if (P1.X < 0) or (P1.X >= FGridSize) or (P1.Y < 0) or (P1.Y >= FGridSize) then Exit;
 
     for J := I + 1 to High(APoints) do
     begin
       P2 := APoints[J];
 
-      // 2. Aynı SATIR kontrolü
-      if P1.X = P2.X then
-        Exit;
+      if P1.X = P2.X then Exit; // Aynı Satır
+      if P1.Y = P2.Y then Exit; // Aynı Sütun
+      if FRegions[P1.X, P1.Y] = FRegions[P2.X, P2.Y] then Exit; // Aynı Bölge
 
-      // 3. Aynı SÜTUN kontrolü
-      if P1.Y = P2.Y then
-        Exit;
-
-      // 4. Aynı BÖLGE (Region) kontrolü
-      if FRegions[P1.X, P1.Y] = FRegions[P2.X, P2.Y] then
-        Exit;
-
-      // 5. DOKUNMA (Adjacency) kontrolü
-      // Kraliçeler çapraz dahil birbirine değmemeli (Mesafe her yönden > 1 olmalı)
-      if (Abs(P1.X - P2.X) <= 1) and (Abs(P1.Y - P2.Y) <= 1) then
-        Exit;
+      // Çapraz veya bitişik dokunma kontrolü
+      if (Abs(P1.X - P2.X) <= 1) and (Abs(P1.Y - P2.Y) <= 1) then Exit;
     end;
   end;
 
-  Result := True; // Tüm testlerden geçti!
+  Result := True;
 end;
 
 function TOctailyQueensGenerator.PlaceQueensBacktracking(Row: Integer): Boolean;
 var
-  Col, I: Integer;
+  I, J, Col, Temp: Integer;
   IsValid: Boolean;
+  Cols: TArray<Integer>;
 begin
-  if Row >= FGridSize then
-    Exit(True); // Tüm satırlara kraliçe kondu, bitti!
+  if Row >= FGridSize then Exit(True);
 
-  for Col := 0 to FGridSize - 1 do
+  // 1. ADIM: Sütunları rastgele karıştır ki her gün aynı bulmaca çıkmasın!
+  SetLength(Cols, FGridSize);
+  for I := 0 to FGridSize - 1 do Cols[I] := I;
+
+  for I := FGridSize - 1 downto 1 do
   begin
-    IsValid := True;
-    // 1. Sütun kontrolü ve 2. Komşuluk (Değmeme) kontrolü
-    for I := 0 to Row - 1 do
-    begin
-      // Aynı sütunda mı?
-      if FSolution[I].Y = Col then
-        IsValid := False;
-      // Komşu hücrelerde mi? (Çapraz veya bitişik)
-      if (Abs(FSolution[I].X - Row) <= 1) and (Abs(FSolution[I].Y - Col) <= 1)
-      then
-        IsValid := False;
+    J := Random(I + 1);
+    Temp := Cols[I];
+    Cols[I] := Cols[J];
+    Cols[J] := Temp;
+  end;
 
-      if not IsValid then
-        Break;
+  // 2. ADIM: Karıştırılmış sütunları dene
+  for I := 0 to FGridSize - 1 do
+  begin
+    Col := Cols[I];
+    IsValid := True;
+
+    for J := 0 to Row - 1 do
+    begin
+      if FSolution[J].Y = Col then IsValid := False;
+      if (Abs(FSolution[J].X - Row) <= 1) and (Abs(FSolution[J].Y - Col) <= 1) then IsValid := False;
+
+      if not IsValid then Break;
     end;
 
     if IsValid then
     begin
       FSolution[Row].X := Row;
       FSolution[Row].Y := Col;
-      if PlaceQueensBacktracking(Row + 1) then
-        Exit(True);
+      if PlaceQueensBacktracking(Row + 1) then Exit(True);
     end;
   end;
   Result := False;
 end;
 
-procedure TOctailyQueensGenerator.GenerateDailyPuzzle;
+procedure TOctailyQueensGenerator.GrowRegionsOrganically;
 var
-  R, C, I, TargetR, TargetC, Dir: Integer;
-  Changed: Boolean;
-  Dirs: array [0 .. 3] of TPoint;
+  R, C, Reg, PickIndex: Integer;
+  EmptyCount: Integer;
+  Candidates: TArray<TPoint>;
+  Target: TPoint;
 begin
-  ClearGrid;
-  Randomize;
+  EmptyCount := (FGridSize * FGridSize) - FGridSize;
 
-  // Yönleri tanımlayalım (Yukarı, Aşağı, Sol, Sağ)
-  Dirs[0].X := -1;
-  Dirs[0].Y := 0;
-  Dirs[1].X := 1;
-  Dirs[1].Y := 0;
-  Dirs[2].X := 0;
-  Dirs[2].Y := -1;
-  Dirs[3].X := 0;
-  Dirs[3].Y := 1;
-
-  // 1. Kraliçeleri yerleştir
-  SetLength(FSolution, FGridSize);
-  if not PlaceQueensBacktracking(0) then
+  // Tüm hücreler dolana kadar döngü devam etsin
+  while EmptyCount > 0 do
   begin
-    // Eğer çözüm bulunamazsa (çok düşük ihtimal) tekrar dene veya varsayılan dön
-    GenerateDailyPuzzle;
-    Exit;
-  end;
+    // Her bölgeye (renge) adil bir şekilde sırayla "1 kare büyüme" hakkı veriyoruz
+    for Reg := 0 to FGridSize - 1 do
+    begin
+      if EmptyCount = 0 then Break;
 
-  // 2. Bölgeleri Kraliçelerin olduğu yerlerden başlat (Tohumlama)
-  // Önce gridi -1 (boş) ile doldur
-  for R := 0 to FGridSize - 1 do
-    for C := 0 to FGridSize - 1 do
-      FRegions[R, C] := -1;
+      SetLength(Candidates, 0);
 
-  for I := 0 to FGridSize - 1 do
-    FRegions[FSolution[I].X, FSolution[I].Y] := I;
-
-  // 3. Boş hücreleri rastgele büyüterek doldur
-  repeat
-    Changed := False;
-    for R := 0 to FGridSize - 1 do
-      for C := 0 to FGridSize - 1 do
+      // Bu bölgenin etrafındaki boş hücreleri (adayları) topla
+      for R := 0 to FGridSize - 1 do
       begin
-        if FRegions[R, C] = -1 then // Eğer hücre hala boşsa
+        for C := 0 to FGridSize - 1 do
         begin
-          // Sadece bir yöne değil, 4 yöne de sırayla bak
-          for Dir := 0 to 3 do
+          if FRegions[R, C] = -1 then // Boş bir hücre ise komşularına bak
           begin
-            TargetR := R + Dirs[Dir].X;
-            TargetC := C + Dirs[Dir].Y;
-
-            if (TargetR >= 0) and (TargetR < FGridSize) and (TargetC >= 0) and
-              (TargetC < FGridSize) and (FRegions[TargetR, TargetC] <> -1) then
+            if ((R > 0) and (FRegions[R-1, C] = Reg)) or
+               ((R < FGridSize - 1) and (FRegions[R+1, C] = Reg)) or
+               ((C > 0) and (FRegions[R, C-1] = Reg)) or
+               ((C < FGridSize - 1) and (FRegions[R, C+1] = Reg)) then
             begin
-              FRegions[R, C] := FRegions[TargetR, TargetC];
-              Changed := True;
-              Break; // Bir komşu bulduk, bu hücre için diğer yönlere bakmaya gerek yok
+              SetLength(Candidates, Length(Candidates) + 1);
+              Candidates[High(Candidates)].X := R;
+              Candidates[High(Candidates)].Y := C;
             end;
           end;
         end;
       end;
-  until not Changed;
+
+      // Eğer bu bölgenin genişleyebileceği aday hücreler varsa RASTGELE birini seç ve fethet!
+      if Length(Candidates) > 0 then
+      begin
+        PickIndex := Random(Length(Candidates));
+        Target := Candidates[PickIndex];
+        FRegions[Target.X, Target.Y] := Reg;
+        Dec(EmptyCount);
+      end;
+    end;
+  end;
+end;
+
+procedure TOctailyQueensGenerator.GenerateDailyPuzzle;
+var
+  R, C, I: Integer;
+begin
+  ClearGrid;
+  Randomize; // Rastgeleliği başlat!
+
+  // 1. Kraliçeleri rastgele yerleştir
+  SetLength(FSolution, FGridSize);
+  if not PlaceQueensBacktracking(0) then
+  begin
+    GenerateDailyPuzzle; // Çok düşük bir ihtimal de olsa bulamazsa yeniden başlat
+    Exit;
+  end;
+
+  // 2. Gridi -1 ile doldur (Boş tahta)
+  for R := 0 to FGridSize - 1 do
+    for C := 0 to FGridSize - 1 do
+      FRegions[R, C] := -1;
+
+  // 3. Kraliçelerin olduğu yerleri "Tohum" olarak ek.
+  for I := 0 to FGridSize - 1 do
+    FRegions[FSolution[I].X, FSolution[I].Y] := I;
+
+  // 4. Organik / Tetris Büyüme Algoritmasını Çalıştır
+  GrowRegionsOrganically;
 
   FGameDate := Date;
 end;
@@ -228,14 +227,13 @@ begin
   Result.AddPair('game', FGameName);
   Result.AddPair('grid_size', TJSONNumber.Create(FGridSize));
 
-  // Client'a bölgeleri gönderiyoruz (Kraliçeler gizli!)
   RowsArray := TJSONArray.Create;
   for R := 0 to FGridSize - 1 do
   begin
     RowData := TJSONArray.Create;
     for C := 0 to FGridSize - 1 do
       RowData.Add(FRegions[R, C]);
-    RowsArray.AddElement(RowData); // Hangi hücre hangi bölgeye ait
+    RowsArray.AddElement(RowData);
   end;
 
   Result.AddPair('regions', RowsArray);
@@ -258,10 +256,9 @@ begin
       SetLength(GuessPoints, JSONGuess.Count);
       for I := 0 to JSONGuess.Count - 1 do
       begin
-        // İstemciden gelen veri formatı örn: [{"x":0, "y":2}, ...]
         TempItem := JSONGuess.Items[I];
-        GuessPoints[I].X := TempItem.GetValue<Integer>('x');
-        GuessPoints[I].Y := TempItem.GetValue<Integer>('y');
+        GuessPoints[I].X := TempItem.GetValue<Integer>('r'); // 'r' ve 'c' olarak geliyordu sanırım
+        GuessPoints[I].Y := TempItem.GetValue<Integer>('c');
       end;
 
       if IsValidPlacement(GuessPoints) then

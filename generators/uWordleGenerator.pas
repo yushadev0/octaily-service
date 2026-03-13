@@ -11,6 +11,7 @@ type
     FWordList: TStringList;
     FDailyWord: string;
     FDataFilePath: string;
+    FPuzzleID: string;
     procedure LoadWords;
   public
     constructor Create(AGameName, ADataFilePath: string); reintroduce;
@@ -53,14 +54,17 @@ begin
     // YENİSİ: TEncoding.UTF8 parametresini ekliyoruz!
     FWordList.LoadFromFile(FDataFilePath, TEncoding.UTF8)
   else
-    raise Exception.CreateFmt('%s için kelime dosyası bulunamadı: %s', [FGameName, FDataFilePath]);
+    raise Exception.CreateFmt('%s için kelime dosyası bulunamadı: %s',
+      [FGameName, FDataFilePath]);
 end;
+
 procedure TOctailyWordleGenerator.GenerateDailyPuzzle;
 begin
   if FWordList.Count > 0 then
   begin
     Randomize;
     FDailyWord := UpperCase(FWordList[Random(FWordList.Count)]);
+    FPuzzleID := FormatDateTime('yyyymmdd_hhnnss', Now);
     FGameDate := Date;
   end;
 end;
@@ -71,6 +75,7 @@ begin
   Result.AddPair('success', TJSONBool.Create(True));
   Result.AddPair('game', FGameName);
   Result.AddPair('date', DateToStr(FGameDate));
+  Result.AddPair('id', FPuzzleID);
 
   Result.AddPair('word_length', TJSONNumber.Create(5));
   Result.AddPair('message', 'Bugünün kelimesi hazir, tahminlerini bekliyorum!');
@@ -82,8 +87,8 @@ var
   LetterObj: TJSONObject;
   I, J: Integer;
   GuessUpper, TargetUpper: string;
-  TargetMatched, GuessMatched: array[1..5] of Boolean;
-  Statuses: array[1..5] of string;
+  TargetMatched, GuessMatched: array [1 .. 5] of Boolean;
+  Statuses: array [1 .. 5] of string;
 begin
   Result := TJSONObject.Create;
   Result.AddPair('success', TJSONBool.Create(True));
@@ -97,9 +102,10 @@ begin
   // Güvenlik: Kelime 5 harfli mi ve günün kelimesi hazır mı?
   if (Length(GuessUpper) <> 5) or (Length(TargetUpper) <> 5) then
   begin
-     Result.AddPair('error', 'Geçersiz kelime uzunluğu veya günün kelimesi üretilmemiş.');
-     Result.AddPair('result', JSONArray);
-     Exit;
+    Result.AddPair('error',
+      'Geçersiz kelime uzunluğu veya günün kelimesi üretilmemiş.');
+    Result.AddPair('result', JSONArray);
+    Exit;
   end;
 
   // Dizileri sıfırla

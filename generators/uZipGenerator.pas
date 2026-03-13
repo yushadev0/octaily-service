@@ -14,16 +14,20 @@ type
   TOctailyZipGenerator = class(TOctailyBaseGenerator)
   private
     FGridSize: Integer;
-    FSolutionPath: TList<TPoint>; // Sunucunun ürettiği gizli çözüm
-    FGridNumbers: array of array of Integer; // Durak rakamları (1, 2, 3...)
+    FPuzzleID: string;
+    FSolutionPath: TList<TPoint>;
+    FGridNumbers: TArray<TArray<Integer>>;
 
+    function GetUnvisitedNeighborsCount(X, Y: Integer;
+      const Visited: TArray < TArray < Boolean >> ): Integer;
     function FindRandomPath(CurrX, CurrY: Integer;
-      Visited: TArray<TArray<Boolean>>; Count: Integer): Boolean;
+      var Visited: TArray<TArray<Boolean>>; Count: Integer): Boolean;
     procedure ClearGrid;
     function IsAdjacent(P1, P2: TPoint): Boolean;
 
   public
-    constructor Create(AGameName: string; ASize: Integer = 5); reintroduce;
+    // Varsayılan boyut artık 8 (8x8 = 64 Hücre)
+    constructor Create(AGameName: string; ASize: Integer = 8); reintroduce;
     destructor Destroy; override;
     procedure GenerateDailyPuzzle; override;
     function GetDailyPuzzleJSON: TJSONObject; override;
@@ -33,7 +37,13 @@ type
 
 implementation
 
-{ TOctailyZipGenerator }
+type
+  TNeighbor = record
+    Pos: TPoint;
+    Degree: Integer;
+  end;
+
+  { TOctailyZipGenerator }
 
 constructor TOctailyZipGenerator.Create(AGameName: string; ASize: Integer);
 begin
@@ -53,14 +63,12 @@ var
   P: TPoint;
 begin
   Result := '';
-
   if Assigned(FSolutionPath) and (FSolutionPath.Count > 0) then
   begin
     for P in FSolutionPath do
     begin
       if Result <> '' then
         Result := Result + ' -> ';
-
       Result := Result + Format('(%d,%d)', [P.X, P.Y]);
     end;
   end
@@ -69,23 +77,59 @@ begin
 end;
 
 procedure TOctailyZipGenerator.ClearGrid;
+var
+  R, C: Integer;
 begin
   SetLength(FGridNumbers, FGridSize, FGridSize);
+  for R := 0 to FGridSize - 1 do
+    for C := 0 to FGridSize - 1 do
+      FGridNumbers[R, C] := 0;
+
   FSolutionPath.Clear;
 end;
 
 function TOctailyZipGenerator.IsAdjacent(P1, P2: TPoint): Boolean;
 begin
-  // Sadece yatay veya dikey komşuluk (Manhattan mesafesi = 1)
-  Result := Abs(P1.X - P2.X) + Abs(P1.Y - P2.Y) = 1;
+  Result := (Abs(P1.X - P2.X) + Abs(P1.Y - P2.Y)) = 1;
 end;
 
+// Warnsdorff Sezgisel Kuralı: Bir hücrenin kaç tane gidilmemiş "boş" komşusu var?
+function TOctailyZipGenerator.GetUnvisitedNeighborsCount(X, Y: Integer;
+  const Visited: TArray < TArray < Boolean >> ): Integer;
+var
+  I, NX, NY, Cnt: Integer;
+  Dirs: array [0 .. 3] of TPoint;
+begin
+  Cnt := 0;
+  Dirs[0].X := 0;
+  Dirs[0].Y := -1;
+  Dirs[1].X := 0;
+  Dirs[1].Y := 1;
+  Dirs[2].X := -1;
+  Dirs[2].Y := 0;
+  Dirs[3].X := 1;
+  Dirs[3].Y := 0;
+
+  for I := 0 to 3 do
+  begin
+    NX := X + Dirs[I].X;
+    NY := Y + Dirs[I].Y;
+    if (NX >= 0) and (NX < FGridSize) and (NY >= 0) and (NY < FGridSize) then
+      if not Visited[NX, NY] then
+        Inc(Cnt);
+  end;
+  Result := Cnt;
+end;
+
+// Warnsdorff destekli optimize edilmiş Derinlik Öncelikli Arama (DFS)
 function TOctailyZipGenerator.FindRandomPath(CurrX, CurrY: Integer;
-  Visited: TArray<TArray<Boolean>>; Count: Integer): Boolean;
+  var Visited: TArray<TArray<Boolean>>; Count: Integer): Boolean;
 var
   Dirs: array [0 .. 3] of TPoint;
-  I, NextX, NextY, RandIdx: Integer;
-  Temp: TPoint;
+  Neighbors: array [0 .. 3] of TNeighbor;
+  I, J, ValidCount, NextX, NextY, RandIdx: Integer;
+  TempPoint: TPoint;
+  TempNeighbor: TNeighbor;
 begin
   if Count = (FGridSize * FGridSize) then
     Exit(True);
@@ -99,74 +143,126 @@ begin
   Dirs[3].X := 1;
   Dirs[3].Y := 0;
 
+  // Eşitlik durumlarında rastgeleliği korumak için yönleri başta karıştırıyoruz
   for I := 0 to 3 do
   begin
     RandIdx := Random(4);
-    Temp := Dirs[I];
+    TempPoint := Dirs[I];
     Dirs[I] := Dirs[RandIdx];
-    Dirs[RandIdx] := Temp;
+    Dirs[RandIdx] := TempPoint;
   end;
 
+  ValidCount := 0;
   for I := 0 to 3 do
   begin
     NextX := CurrX + Dirs[I].X;
     NextY := CurrY + Dirs[I].Y;
     if (NextX >= 0) and (NextX < FGridSize) and (NextY >= 0) and
-      (NextY < FGridSize) and (not Visited[NextX, NextY]) then
+      (NextY < FGridSize) then
     begin
-      Visited[NextX, NextY] := True;
-      Temp.X := NextX;
-      Temp.Y := NextY;
-      FSolutionPath.Add(Temp);
-      if FindRandomPath(NextX, NextY, Visited, Count + 1) then
-        Exit(True);
-      FSolutionPath.Delete(FSolutionPath.Count - 1);
-      Visited[NextX, NextY] := False;
+      if not Visited[NextX, NextY] then
+      begin
+        Neighbors[ValidCount].Pos.X := NextX;
+        Neighbors[ValidCount].Pos.Y := NextY;
+        // Bu komşuya gidersek onun kaç boş komşusu kalacak?
+        Neighbors[ValidCount].Degree := GetUnvisitedNeighborsCount(NextX,
+          NextY, Visited);
+        Inc(ValidCount);
+      end;
     end;
   end;
+
+  // Warnsdorff: Komşuları çıkış sayısına göre (Degree) KÜÇÜKTEN BÜYÜĞE sırala!
+  // Çıkmaz sokağa girmek üzere olan (Degree'si en az olan) hücreyi ilk ziyaret et ki tahta tıkanmasın.
+  for I := 0 to ValidCount - 2 do
+    for J := I + 1 to ValidCount - 1 do
+      if Neighbors[J].Degree < Neighbors[I].Degree then
+      begin
+        TempNeighbor := Neighbors[I];
+        Neighbors[I] := Neighbors[J];
+        Neighbors[J] := TempNeighbor;
+      end;
+
+  // Sıralanmış en ideal yolları dene
+  for I := 0 to ValidCount - 1 do
+  begin
+    NextX := Neighbors[I].Pos.X;
+    NextY := Neighbors[I].Pos.Y;
+
+    Visited[NextX, NextY] := True;
+    FSolutionPath.Add(Neighbors[I].Pos);
+
+    if FindRandomPath(NextX, NextY, Visited, Count + 1) then
+      Exit(True);
+
+    FSolutionPath.Delete(FSolutionPath.Count - 1); // Backtrack (Geri sar)
+    Visited[NextX, NextY] := False;
+  end;
+
   Result := False;
 end;
 
 procedure TOctailyZipGenerator.GenerateDailyPuzzle;
 var
   Visited: TArray<TArray<Boolean>>;
-  R, C, WaypointValue, Step, I: Integer;
+  R, C, WaypointValue, Step, I, TargetIdx, TotalWaypoints,
+    IntermediateCount: Integer;
   StartPos: TPoint;
+  Success: Boolean;
 begin
   ClearGrid;
   Randomize;
-  SetLength(Visited, FGridSize, FGridSize);
-  for R := 0 to FGridSize - 1 do
-    for C := 0 to FGridSize - 1 do
-    begin
-      Visited[R, C] := False;
-      FGridNumbers[R, C] := 0;
-    end;
 
-  StartPos.X := Random(FGridSize);
-  StartPos.Y := Random(FGridSize);
-  Visited[StartPos.X, StartPos.Y] := True;
-  FSolutionPath.Add(StartPos);
+  Success := False;
 
-  if FindRandomPath(StartPos.X, StartPos.Y, Visited, 1) then
+  while not Success do
   begin
-    // 1. Durak (Başlangıç)
-    FGridNumbers[FSolutionPath[0].X, FSolutionPath[0].Y] := 1;
+    SetLength(Visited, FGridSize, FGridSize);
+    for R := 0 to FGridSize - 1 do
+      for C := 0 to FGridSize - 1 do
+        Visited[R, C] := False;
 
-    // Ara Duraklar (Waypoints)
-    WaypointValue := 2;
-    Step := (FGridSize * FGridSize) div 4; // Her %25'lik dilime bir durak
-    for I := 1 to 2 do
-    begin
-      R := (I * Step) + Random(2);
-      FGridNumbers[FSolutionPath[R].X, FSolutionPath[R].Y] := WaypointValue;
-      Inc(WaypointValue);
-    end;
+    FSolutionPath.Clear;
 
-    // Son Durak (Bitiş)
-    FGridNumbers[FSolutionPath[FSolutionPath.Count - 1].X,
-      FSolutionPath[FSolutionPath.Count - 1].Y] := WaypointValue;
+    StartPos.X := Random(FGridSize);
+    StartPos.Y := Random(FGridSize);
+
+    if (FGridSize mod 2 <> 0) and ((StartPos.X + StartPos.Y) mod 2 <> 0) then
+      Continue;
+
+    Visited[StartPos.X, StartPos.Y] := True;
+    FSolutionPath.Add(StartPos);
+
+    Success := FindRandomPath(StartPos.X, StartPos.Y, Visited, 1);
   end;
+
+  // 1. Durak (Başlangıç)
+  FGridNumbers[FSolutionPath[0].X, FSolutionPath[0].Y] := 1;
+
+  // TERLETEN ZORLUK: Rastgele 10 ile 15 arası toplam durak sayısı belirle
+  TotalWaypoints := 10 + Random(6); // 10, 11, 12, 13, 14, 15
+  IntermediateCount := TotalWaypoints - 2;
+
+  WaypointValue := 2;
+  Step := (FGridSize * FGridSize) div (IntermediateCount + 1);
+
+  for I := 1 to IntermediateCount do
+  begin
+    // Araya biraz rastgelelik kat (Duraklar dümdüz eşit aralıklı olmasın)
+    TargetIdx := (I * Step) + Random(Max(1, Step div 2));
+    if TargetIdx >= FSolutionPath.Count - 1 then
+      Break;
+
+    FGridNumbers[FSolutionPath[TargetIdx].X, FSolutionPath[TargetIdx].Y] :=
+      WaypointValue;
+    Inc(WaypointValue);
+  end;
+
+  // Son Durak (Bitiş)
+  FGridNumbers[FSolutionPath[FSolutionPath.Count - 1].X,
+    FSolutionPath[FSolutionPath.Count - 1].Y] := WaypointValue;
+
+  FPuzzleID := FormatDateTime('yyyymmdd_hhnnss', Now);
   FGameDate := Date;
 end;
 
@@ -178,6 +274,7 @@ begin
   Result := TJSONObject.Create;
   Result.AddPair('success', TJSONBool.Create(True));
   Result.AddPair('game', FGameName);
+  Result.AddPair('id', FPuzzleID);
   Result.AddPair('grid_size', TJSONNumber.Create(FGridSize));
 
   GridArr := TJSONArray.Create;
@@ -196,7 +293,6 @@ var
   JSONGuess: TJSONArray;
   P, PrevP: TPoint;
   I, ExpectedWaypoint: Integer;
-  VisitedCount: Integer;
   GridVisited: array of array of Boolean;
 begin
   Result := TJSONObject.Create;
@@ -211,7 +307,6 @@ begin
       Exit;
     end;
 
-    // 1. KURAL: Tüm hücreler gezilmeli mi?
     if JSONGuess.Count <> (FGridSize * FGridSize) then
     begin
       Result.AddPair('success', TJSONBool.Create(False));
@@ -219,16 +314,23 @@ begin
       Exit;
     end;
 
+    P.X := JSONGuess.Items[0].GetValue<Integer>('x');
+    P.Y := JSONGuess.Items[0].GetValue<Integer>('y');
+    if FGridNumbers[P.X, P.Y] <> 1 then
+    begin
+      Result.AddPair('success', TJSONBool.Create(False));
+      Result.AddPair('error', 'Yola 1 numaradan başlamalısınız!');
+      Exit;
+    end;
+
     SetLength(GridVisited, FGridSize, FGridSize);
     ExpectedWaypoint := 1;
-    VisitedCount := 0;
 
     for I := 0 to JSONGuess.Count - 1 do
     begin
       P.X := JSONGuess.Items[I].GetValue<Integer>('x');
       P.Y := JSONGuess.Items[I].GetValue<Integer>('y');
 
-      // Sınır kontrolü ve Çift ziyaret kontrolü
       if (P.X < 0) or (P.X >= FGridSize) or (P.Y < 0) or (P.Y >= FGridSize) or
         GridVisited[P.X, P.Y] then
       begin
@@ -237,7 +339,6 @@ begin
         Exit;
       end;
 
-      // 2. KURAL: Bitişiklik (Adjacency) - İlk hücre hariç
       if I > 0 then
       begin
         PrevP.X := JSONGuess.Items[I - 1].GetValue<Integer>('x');
@@ -250,7 +351,6 @@ begin
         end;
       end;
 
-      // 3. KURAL: Durak Sıralaması (Waypoints)
       if FGridNumbers[P.X, P.Y] > 0 then
       begin
         if FGridNumbers[P.X, P.Y] <> ExpectedWaypoint then
@@ -263,7 +363,6 @@ begin
       end;
 
       GridVisited[P.X, P.Y] := True;
-      Inc(VisitedCount);
     end;
 
     Result.AddPair('success', TJSONBool.Create(True));

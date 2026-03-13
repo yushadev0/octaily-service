@@ -14,9 +14,11 @@ type
   TForm1 = class(TForm)
     btnStartServer: TButton;
     Memo1: TMemo;
-    Button1: TButton; // İstekleri veya durumu loglamak istersen
+    Button1: TButton;
+    Button2: TButton; // İstekleri veya durumu loglamak istersen
     procedure btnStartServerClick(Sender: TObject);
     procedure Button1Click(Sender: TObject);
+    procedure Button2Click(Sender: TObject);
   private
     { Private declarations }
   public
@@ -129,6 +131,11 @@ begin
     ('worldle'));
   Memo1.Lines.Add('------------------');
 
+end;
+
+procedure TForm1.Button2Click(Sender: TObject);
+begin
+ Halt;
 end;
 
 end.

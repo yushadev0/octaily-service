@@ -12,6 +12,7 @@ type
     TARGET_LEN = 8; // Burayı 8 yaptığında her şey otomatik düzelir
   private
     FDailyEquation: string;
+    FPuzzleID: string;
     function Evaluate(AExpr: string): Integer;
     function IsValidSyntax(AExpr: string): Boolean;
     function HasLeadingZeros(AExpr: string): Boolean;
@@ -153,6 +154,7 @@ begin
   until isValid;
 
   FDailyEquation := tempEq;
+  FPuzzleID := FormatDateTime('yyyymmdd_hhnnss', Now);
   FGameDate := Date;
 end;
 
@@ -162,6 +164,7 @@ begin
   Result.AddPair('success', TJSONBool.Create(True));
   Result.AddPair('game', FGameName);
   Result.AddPair('length', TJSONNumber.Create(TARGET_LEN));
+  Result.AddPair('id', FPuzzleID);
 end;
 
 function TOctailyNerdleGenerator.CheckGuess(AGuess: string): TJSONObject;

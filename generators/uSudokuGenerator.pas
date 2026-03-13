@@ -6,16 +6,18 @@ uses
   System.SysUtils, System.JSON, uBaseGenerator, System.Math;
 
 type
+  TSudokuGrid = array[0..8, 0..8] of Integer;
+
   TOctailySudokuGenerator = class(TOctailyBaseGenerator)
   private
-    FGrid: array [0 .. 8, 0 .. 8] of Integer;
-    // Kullanıcıya gönderilecek (Boşluklu)
-    FSolution: array [0 .. 8, 0 .. 8] of Integer; // Gizli çözüm anahtarı
+    FGrid: TSudokuGrid;     // Kullanıcıya gönderilecek (Boşluklu)
+    FSolution: TSudokuGrid; // Gizli çözüm anahtarı
 
-    // Fazlalık olan overload kaldırıldı, sadece gerekli olan kaldı
-    function IsSafe(Row, Col, Num: Integer): Boolean;
-    function Solve(Row, Col: Integer): Boolean;
-    procedure RemoveDigits(Count: Integer);
+    // Yardımcı fonksiyonlar
+    function IsSafeInGrid(const AGrid: TSudokuGrid; Row, Col, Num: Integer): Boolean;
+    function GenerateSolvedGrid(Row, Col: Integer): Boolean;
+    function CountSolutions(var AGrid: TSudokuGrid; Row, Col: Integer): Integer;
+    procedure RemoveDigits(TargetEmptyCount: Integer);
 
   public
     constructor Create(AGameName: string); reintroduce;
@@ -38,128 +40,169 @@ function TOctailySudokuGenerator.GetDebugAnswer: string;
 var
   Row, Col: Integer;
 begin
-  // Sudoku tahtasının Memo'da alt satırdan başlaması için ilk satır başını ekleyelim
   Result := sLineBreak;
-
   for Row := 0 to 8 do
   begin
     for Col := 0 to 8 do
     begin
-      // Rakamı string'e çevir ve arasına bir boşluk koy
       Result := Result + IntToStr(FSolution[Row, Col]) + ' ';
-
-      // Şık bir görünüm için her 3 sütunda bir dikey çizgi (|) koyabilirsin
       if (Col = 2) or (Col = 5) then
         Result := Result + '| ';
     end;
-
-    // Satır bittiğinde bir alt satıra geç
     Result := Result + sLineBreak;
-
-    // Her 3 satırda bir yatay ayırıcı çizgi ekleyelim
     if (Row = 2) or (Row = 5) then
       Result := Result + '-----------------------' + sLineBreak;
   end;
 end;
 
-function TOctailySudokuGenerator.IsSafe(Row, Col, Num: Integer): Boolean;
+// Belirtilen gride rakam koymak güvenli mi? (Satır, Sütun, 3x3 Blok kontrolü)
+function TOctailySudokuGenerator.IsSafeInGrid(const AGrid: TSudokuGrid; Row, Col, Num: Integer): Boolean;
 var
   I, J, StartRow, StartCol: Integer;
 begin
-  // Satır ve Sütun kontrolü
   for I := 0 to 8 do
-    if (FSolution[Row, I] = Num) or (FSolution[I, Col] = Num) then
+    if (AGrid[Row, I] = Num) or (AGrid[I, Col] = Num) then
       Exit(False);
 
-  // 3x3 Blok kontrolü
   StartRow := (Row div 3) * 3;
   StartCol := (Col div 3) * 3;
   for I := 0 to 2 do
     for J := 0 to 2 do
-      if FSolution[StartRow + I, StartCol + J] = Num then
+      if AGrid[StartRow + I, StartCol + J] = Num then
         Exit(False);
 
   Result := True;
 end;
 
-function TOctailySudokuGenerator.Solve(Row, Col: Integer): Boolean;
+// Karıştırılmış (Shuffled) Backtracking ile %100 rastgele ve doğru bir tahta üretir
+function TOctailySudokuGenerator.GenerateSolvedGrid(Row, Col: Integer): Boolean;
 var
-  Num: Integer;
+  I, J, Temp, NextRow, NextCol: Integer;
+  Nums: array[0..8] of Integer;
 begin
-  if (Row = 8) and (Col = 9) then
-    Exit(True);
-  if Col = 9 then
+  if Row = 9 then Exit(True); // Tüm satırlar bitti, başarı!
+
+  NextRow := Row;
+  NextCol := Col + 1;
+  if NextCol = 9 then
   begin
-    Row := Row + 1;
-    Col := 0;
+    NextRow := Row + 1;
+    NextCol := 0;
   end;
 
   if FSolution[Row, Col] <> 0 then
-    Exit(Solve(Row, Col + 1));
+    Exit(GenerateSolvedGrid(NextRow, NextCol));
 
-  for Num := 1 to 9 do
+  // 1'den 9'a kadar rakamları sırayla değil, karıştırarak dene!
+  for I := 0 to 8 do Nums[I] := I + 1;
+  for I := 8 downto 1 do
   begin
-    if IsSafe(Row, Col, Num) then
+    J := Random(I + 1);
+    Temp := Nums[I];
+    Nums[I] := Nums[J];
+    Nums[J] := Temp;
+  end;
+
+  for I := 0 to 8 do
+  begin
+    if IsSafeInGrid(FSolution, Row, Col, Nums[I]) then
     begin
-      FSolution[Row, Col] := Num;
-      if Solve(Row, Col + 1) then
-        Exit(True);
+      FSolution[Row, Col] := Nums[I];
+      if GenerateSolvedGrid(NextRow, NextCol) then Exit(True);
+      FSolution[Row, Col] := 0; // Backtrack
     end;
-    FSolution[Row, Col] := 0; // Backtrack
   end;
   Result := False;
 end;
 
-procedure TOctailySudokuGenerator.GenerateDailyPuzzle;
+// Bu fonksiyon tahtanın benzersiz (tek) bir çözümü olup olmadığını sayar
+function TOctailySudokuGenerator.CountSolutions(var AGrid: TSudokuGrid; Row, Col: Integer): Integer;
 var
-  I, J, R, TryCount: Integer;
+  Num, NextRow, NextCol: Integer;
 begin
-  Randomize;
-  // 1. Tabloyu temizle
-  for I := 0 to 8 do
-    for J := 0 to 8 do
-      FSolution[I, J] := 0;
+  if Row = 9 then Exit(1); // 1 çözüm bulundu
 
-  // 2. İlk satırı kurallara uygun şekilde rastgele doldur
-  TryCount := 0;
-  I := 0;
-  while (I < 9) and (TryCount < 100) do
+  NextRow := Row;
+  NextCol := Col + 1;
+  if NextCol = 9 then
   begin
-    R := Random(9) + 1;
-    if IsSafe(0, I, R) then
-    begin
-      FSolution[0, I] := R;
-      Inc(I);
-    end;
-    Inc(TryCount);
+    NextRow := Row + 1;
+    NextCol := 0;
   end;
 
-  // 3. Geri kalan tabloyu doldur
-  Solve(0, 0);
+  if AGrid[Row, Col] <> 0 then
+    Exit(CountSolutions(AGrid, NextRow, NextCol));
 
-  // 4. Çözümü kopyala ve içinden rakam sil
-  for I := 0 to 8 do
-    for J := 0 to 8 do
-      FGrid[I, J] := FSolution[I, J];
+  Result := 0;
+  for Num := 1 to 9 do
+  begin
+    if IsSafeInGrid(AGrid, Row, Col, Num) then
+    begin
+      AGrid[Row, Col] := Num;
+      Result := Result + CountSolutions(AGrid, NextRow, NextCol);
+      AGrid[Row, Col] := 0; // Backtrack
 
-  RemoveDigits(45); // Orta zorluk
-  FGameDate := Date;
+      // Eğer zaten 1'den fazla çözüm bulduysak, zaman kaybetme, çık! (Matematiksel olarak hatalı Sudoku)
+      if Result > 1 then Exit(Result);
+    end;
+  end;
 end;
 
-procedure TOctailySudokuGenerator.RemoveDigits(Count: Integer);
+// Matematiksel kuralları bozmadan hücreleri gizler
+procedure TOctailySudokuGenerator.RemoveDigits(TargetEmptyCount: Integer);
 var
-  R, C: Integer;
+  Attempts, R, C, Backup, EmptyCount: Integer;
 begin
-  while Count > 0 do
+  Attempts := 0;
+  EmptyCount := 0;
+
+  // Tahtayı bozmadan hedef boşluk sayısına ulaşmaya çalış (Max 200 deneme)
+  while (EmptyCount < TargetEmptyCount) and (Attempts < 200) do
   begin
     R := Random(9);
     C := Random(9);
+
     if FGrid[R, C] <> 0 then
     begin
-      FGrid[R, C] := 0;
-      Dec(Count);
+      Backup := FGrid[R, C];
+      FGrid[R, C] := 0; // Silmeyi dene
+
+      // Sildiğimizde bulmacanın ÇİFT çözümü oluyorsa, silmekten vazgeç, sayıyı geri koy!
+      if CountSolutions(FGrid, 0, 0) <> 1 then
+        FGrid[R, C] := Backup
+      else
+        Inc(EmptyCount); // Güvenle silindi
     end;
+    Inc(Attempts);
   end;
+end;
+
+procedure TOctailySudokuGenerator.GenerateDailyPuzzle;
+var
+  R, C: Integer;
+begin
+  Randomize;
+
+  // 1. Tabloları temizle
+  for R := 0 to 8 do
+    for C := 0 to 8 do
+    begin
+      FSolution[R, C] := 0;
+      FGrid[R, C] := 0;
+    end;
+
+  // 2. Gizli çözüm anahtarını (%100 dolu ve doğru) rastgele üret
+  GenerateSolvedGrid(0, 0);
+
+  // 3. Kullanıcıya gidecek gridi kopyala
+  for R := 0 to 8 do
+    for C := 0 to 8 do
+      FGrid[R, C] := FSolution[R, C];
+
+  // 4. Kaliteli bir Sudoku elde etmek için 45 ila 50 civarı hücreyi zekice gizle
+  RemoveDigits(50); // Orta/Zor Seviye (Tekil çözüm garantili)
+
+  FGameDate := Date;
 end;
 
 function TOctailySudokuGenerator.GetDailyPuzzleJSON: TJSONObject;
@@ -204,13 +247,11 @@ begin
       RowArr := JSONGuess.Items[R] as TJSONArray;
       for C := 0 to 8 do
       begin
-        // JSON parsing kısmını daha güvenli hale getirdik
         Val := RowArr.Items[C].GetValue<Integer>;
         if Val <> FSolution[R, C] then
         begin
           Result.AddPair('success', TJSONBool.Create(False));
-          Result.AddPair('error', Format('Hata: Satır %d, Sütun %d yanlış!',
-            [R + 1, C + 1]));
+          Result.AddPair('error', Format('Hata: Satır %d, Sütun %d yanlış!', [R + 1, C + 1]));
           Exit;
         end;
       end;
