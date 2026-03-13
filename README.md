@@ -30,7 +30,7 @@ The system currently supports 8 different "Daily Puzzle" engines:
 Running the project on your local machine or server is straightforward. It requires no external dependencies (like Node.js, Python, etc.).
 
 1. Clone the repository: `git clone https://github.com/yushadev0/octaily-api.git`
-2. Open `OctailyAPI.dpr` (or the project file containing `Unit1.pas`) in your Delphi IDE.
+2. Open `OctailyService.dproj` in your Delphi IDE.
 3. Ensure that the [Horse](https://github.com/HashLoad/horse) and [Horse.CORS](https://github.com/HashLoad/horse-cors) libraries are added to your Search Path.
 4. Compile the project (F9). The server will start on port `9000` by default.
 
