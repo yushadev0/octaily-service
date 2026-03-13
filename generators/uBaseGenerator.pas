@@ -25,6 +25,7 @@ type
 
     property GameName: string read FGameName;
     property GameDate: TDate read FGameDate write FGameDate;
+    function GetDebugAnswer: string; virtual;
   end;
 
 implementation
@@ -33,6 +34,11 @@ constructor TOctailyBaseGenerator.Create(AGameName: string);
 begin
   FGameName := AGameName;
   FGameDate := Today; // System.DateUtils'den gelir, bugünün tarihini atar
+end;
+
+function TOctailyBaseGenerator.GetDebugAnswer: string;
+begin
+  Result := 'Bu oyun için debug cevabı tanımlanmamış.';
 end;
 
 end.

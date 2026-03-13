@@ -20,6 +20,7 @@ type
     function GetDailyPuzzleJSON: TJSONObject; override;
     function CheckGuess(AGuess: string): TJSONObject; override;
     property DailyWord: string read FDailyWord;
+    function GetDebugAnswer: string; override;
   end;
 
 implementation
@@ -38,6 +39,11 @@ destructor TOctailyWordleGenerator.Destroy;
 begin
   FWordList.Free;
   inherited;
+end;
+
+function TOctailyWordleGenerator.GetDebugAnswer: string;
+begin
+  Result := FDailyWord; // Hedef kelimeyi doğrudan döndür
 end;
 
 procedure TOctailyWordleGenerator.LoadWords;

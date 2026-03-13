@@ -25,6 +25,7 @@ type
     procedure GenerateDailyPuzzle; override;
     function GetDailyPuzzleJSON: TJSONObject; override;
     function CheckGuess(AGuess: string): TJSONObject; override;
+    function GetDebugAnswer: string; override;
   end;
 
 implementation
@@ -35,6 +36,25 @@ constructor TOctailyQueensGenerator.Create(AGameName: string; ASize: Integer);
 begin
   inherited Create(AGameName);
   FGridSize := ASize;
+end;
+
+function TOctailyQueensGenerator.GetDebugAnswer: string;
+var
+  P: TPoint;
+begin
+  Result := '';
+
+  for P in FSolution do
+  begin
+
+    if Result <> '' then
+      Result := Result + ', ';
+
+    Result := Result + Format('(%d,%d)', [P.X, P.Y]);
+  end;
+
+  if Result = '' then
+    Result := 'Çözüm dizisi boş (henüz üretilmemiş).';
 end;
 
 procedure TOctailyQueensGenerator.ClearGrid;

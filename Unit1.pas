@@ -7,13 +7,16 @@ uses
   System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
   System.JSON, Horse, uOctailyManager, System.Net.HttpClient,
-  System.Net.URLClient, System.Net.HttpClientComponent, Horse.CORS;
+  System.Net.URLClient, System.Net.HttpClientComponent, Horse.CORS,
+  uWordleGenerator;
 
 type
   TForm1 = class(TForm)
     btnStartServer: TButton;
-    Memo1: TMemo; // İstekleri veya durumu loglamak istersen
+    Memo1: TMemo;
+    Button1: TButton; // İstekleri veya durumu loglamak istersen
     procedure btnStartServerClick(Sender: TObject);
+    procedure Button1Click(Sender: TObject);
   private
     { Private declarations }
   public
@@ -89,6 +92,43 @@ begin
           btnStartServer.Enabled := False; // Yanlışlıkla tekrar basılmasın
         end);
     end);
+end;
+
+procedure TForm1.Button1Click(Sender: TObject);
+begin
+  Memo1.Lines.Add('=== Bugünün Cevapları ===');
+
+  Memo1.Lines.Add('Wordle TR Cevabı: ' + TOctailyManager.Instance.GetAnswer
+    ('wordle_tr'));
+  Memo1.Lines.Add('------------------');
+
+  Memo1.Lines.Add('Wordle EN Cevabı: ' + TOctailyManager.Instance.GetAnswer
+    ('wordle_en'));
+  Memo1.Lines.Add('------------------');
+
+  Memo1.Lines.Add('Sudoku Cevabı: ' + TOctailyManager.Instance.GetAnswer
+    ('sudoku'));
+  Memo1.Lines.Add('------------------');
+
+  Memo1.Lines.Add('Queens Cevabı: ' + TOctailyManager.Instance.GetAnswer
+    ('queens'));
+  Memo1.Lines.Add('------------------');
+
+  Memo1.Lines.Add('Nerdle Cevabı: ' + TOctailyManager.Instance.GetAnswer
+    ('nerdle'));
+  Memo1.Lines.Add('------------------');
+
+  Memo1.Lines.Add('Zip Cevabı: ' + TOctailyManager.Instance.GetAnswer('zip'));
+  Memo1.Lines.Add('------------------');
+
+  Memo1.Lines.Add('Hexle Cevabı: ' + TOctailyManager.Instance.GetAnswer
+    ('hexle'));
+  Memo1.Lines.Add('------------------');
+
+  Memo1.Lines.Add('Worldle Cevabı: ' + TOctailyManager.Instance.GetAnswer
+    ('worldle'));
+  Memo1.Lines.Add('------------------');
+
 end;
 
 end.

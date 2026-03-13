@@ -7,11 +7,12 @@ uses
 
 type
   TOctailyHexleGenerator = class(TOctailyBaseGenerator)
-  private
-    const HEX_CHARS = '0123456789ABCDEF';
+  private const
+    HEX_CHARS = '0123456789ABCDEF';
   private
     FDailyHex: string; // Örn: "3A8C55"
     function GetHexValue(AChar: Char): Integer;
+
   public
     constructor Create(AGameName: string); reintroduce;
     procedure GenerateDailyPuzzle; override;
@@ -19,6 +20,7 @@ type
     function CheckGuess(AGuess: string): TJSONObject; override;
 
     property DailyHex: string read FDailyHex;
+    function GetDebugAnswer: string; override;
   end;
 
 implementation
@@ -34,6 +36,11 @@ function TOctailyHexleGenerator.GetHexValue(AChar: Char): Integer;
 begin
   // Karakterin HEX dizisindeki yerini döndürür (0-15 arası)
   Result := Pos(UpperCase(AChar), HEX_CHARS) - 1;
+end;
+
+function TOctailyHexleGenerator.GetDebugAnswer: string;
+begin
+  Result := FDailyHex; // Hedef kelimeyi doğrudan döndür
 end;
 
 procedure TOctailyHexleGenerator.GenerateDailyPuzzle;
@@ -54,7 +61,8 @@ begin
   Result := TJSONObject.Create;
   Result.AddPair('success', TJSONBool.Create(True));
   Result.AddPair('game', FGameName);
-  Result.AddPair('message', 'Renk kodu hazir, 6 haneli HEX tahminini bekliyorum!');
+  Result.AddPair('message',
+    'Renk kodu hazir, 6 haneli HEX tahminini bekliyorum!');
 end;
 
 function TOctailyHexleGenerator.CheckGuess(AGuess: string): TJSONObject;
@@ -101,15 +109,15 @@ begin
       if Diff > 3 then
         CharObj.AddPair('status', 'very_higher') // Mesafe uzak (3'ten büyük)
       else
-        CharObj.AddPair('status', 'higher');      // Mesafe yakın
+        CharObj.AddPair('status', 'higher'); // Mesafe yakın
     end
     else
     begin
       // Hedef daha aşağıda
       if Abs(Diff) > 3 then
-        CharObj.AddPair('status', 'very_lower')  // Mesafe uzak
+        CharObj.AddPair('status', 'very_lower') // Mesafe uzak
       else
-        CharObj.AddPair('status', 'lower');       // Mesafe yakın
+        CharObj.AddPair('status', 'lower'); // Mesafe yakın
     end;
 
     JSONArray.AddElement(CharObj);
@@ -117,4 +125,5 @@ begin
 
   Result.AddPair('result', JSONArray);
 end;
+
 end.

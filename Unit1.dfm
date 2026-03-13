@@ -31,4 +31,13 @@ object Form1: TForm1
     TabOrder = 1
     OnClick = btnStartServerClick
   end
+  object Button1: TButton
+    Left = 744
+    Top = 401
+    Width = 155
+    Height = 25
+    Caption = 'Sonu'#231'lar'#305' Yaz'
+    TabOrder = 2
+    OnClick = Button1Click
+  end
 end

@@ -24,6 +24,7 @@ type
     function GetPuzzle(const AGameName: string): TJSONObject;
     function PostGuess(const AGameName: string; const AGuess: string): TJSONObject;
     procedure ForceRefresh; // Manuel yenileme gerekirse
+    function GetAnswer(const AGameName: string): string;
   end;
 
 implementation
@@ -49,6 +50,21 @@ begin
   if not Assigned(FInstance) then
     FInstance := TOctailyManager.Create;
   Result := FInstance;
+end;
+
+function TOctailyManager.GetAnswer(const AGameName: string): string;
+var
+  Gen: TOctailyBaseGenerator;
+begin
+  CheckAndRefresh; // Cevabı vermeden önce güncel bulmaca üretilmiş mi kontrol et
+
+  if FGenerators.TryGetValue(AGameName.ToLower, Gen) then
+  begin
+    // Jeneratörden cevabı string olarak talep et
+    Result := Gen.GetDebugAnswer;
+  end
+  else
+    Result := 'Hata: Oyun bulunamadı!';
 end;
 
 procedure TOctailyManager.InitializeGenerators;
