@@ -1,22 +1,19 @@
-input_file = "C:\yusag\PROJECTS\OctailyService\data\wordle_tr.txt"
-output_file = "C:\yusag\PROJECTS\OctailyService\data\wordle_tr_clean.txt"
+import json
 
-mapping = {
-    "Î": "İ",
-    "Â": "A",
-    "Û": "U",
-    "î": "i",
-    "â": "a",
-    "û": "u"
-}
+input_file = "countries.json"
+output_file = "countries_updated.json"
+
+def title_tr(text):
+    return " ".join(word.capitalize() for word in text.split())
 
 with open(input_file, "r", encoding="utf-8") as f:
-    text = f.read()
+    data = json.load(f)
 
-for old, new in mapping.items():
-    text = text.replace(old, new)
+for country in data:
+    if "name_tr" in country and isinstance(country["name_tr"], str):
+        country["name_tr"] = title_tr(country["name_tr"])
 
 with open(output_file, "w", encoding="utf-8") as f:
-    f.write(text)
+    json.dump(data, f, ensure_ascii=False, indent=2)
 
-print("Dönüşüm tamamlandı.")
+print("Güncellendi.")

@@ -4,7 +4,8 @@ interface
 
 uses
   System.SysUtils, System.JSON, System.Math, System.Generics.Collections,
-  uBaseGenerator, System.IOUtils, System.Character;
+  uBaseGenerator, System.IOUtils, System.Character, System.NetEncoding;
+// NetEncoding eklendi!
 
 type
   TCountry = record
@@ -181,14 +182,36 @@ begin
 end;
 
 function TOctailyWorldleGenerator.GetDailyPuzzleJSON: TJSONObject;
+var
+  ObfuscatedISO: string;
+  CountryArr: TJSONArray;
+  CItem: TJSONObject;
+  C: TCountry;
 begin
   Result := TJSONObject.Create;
   Result.AddPair('success', TJSONBool.Create(True));
   Result.AddPair('game', FGameName);
 
-  // Frontend ülkenin silüetini çizmek isteyeceği için ISO kodunu dönüyoruz
   if FTargetCountry.ISO <> '' then
-    Result.AddPair('iso', FTargetCountry.ISO.ToLower);
+  begin
+    // HİLE KORUMASI: Araya "octaily_" tuzu ekleyip Base64 formatında gönderiyoruz.
+    // Örn: "tr" -> "octaily_tr" -> "b2N0YWlseV90cg=="
+    ObfuscatedISO := TNetEncoding.Base64.Encode
+      ('octaily_' + FTargetCountry.ISO.ToLower);
+    ObfuscatedISO := StringReplace(ObfuscatedISO, #13#10, '', [rfReplaceAll]);
+    Result.AddPair('iso', ObfuscatedISO);
+  end;
+
+  CountryArr := TJSONArray.Create;
+  for C in FCountries do
+  begin
+    CItem := TJSONObject.Create;
+    CItem.AddPair('en', C.OriginalName);
+    CItem.AddPair('tr', C.NameTR); // Türkçe ismi de ekle
+    CountryArr.AddElement(CItem);
+  end;
+  Result.AddPair('countries', CountryArr);
+
 end;
 
 function TOctailyWorldleGenerator.CheckGuess(AGuess: string): TJSONObject;
@@ -204,7 +227,6 @@ begin
 
   for GuessCountry in FCountries do
   begin
-    // HATA BURADAYDI: Hem İngilizce hem Türkçe normalize isimleri kontrol ediyoruz!
     if (GuessCountry.Name = NormalizedGuess) or
       ((GuessCountry.NameTR <> '') and (GuessCountry.NameTR = NormalizedGuess))
     then
