@@ -8,27 +8,79 @@ uses
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
   System.JSON, Horse, uOctailyManager, System.Net.HttpClient,
   System.Net.URLClient, System.Net.HttpClientComponent, Horse.CORS,
-  uWordleGenerator;
+  uWordleGenerator, Vcl.Menus, Vcl.ExtCtrls, IOUtils;
 
 type
   TForm1 = class(TForm)
     btnStartServer: TButton;
     Memo1: TMemo;
     Button1: TButton;
-    Button2: TButton; // İstekleri veya durumu loglamak istersen
+    Button2: TButton;
+    TrayIcon1: TTrayIcon;
+    PopupMenu1: TPopupMenu;
+    MenuItemGosterGizle: TMenuItem;
+    MenuItemCikis: TMenuItem; // İstekleri veya durumu loglamak istersen
     procedure btnStartServerClick(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure Button2Click(Sender: TObject);
+    procedure MenuItemGosterGizleClick(Sender: TObject);
+    procedure MenuItemCikisClick(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure TrayIcon1DblClick(Sender: TObject);
   private
     { Private declarations }
   public
     { Public declarations }
+    procedure LogYaz(Mesaj: string)overload;
+    procedure LogYaz(Satirlar: TStrings); overload;
   end;
 
 var
   Form1: TForm1;
 
 implementation
+
+procedure TForm1.LogYaz(Mesaj: string);
+var
+  LogDosyasi: string;
+begin
+  System.TMonitor.Enter(Self); // Dosyaya yazarken kapıyı kilitle
+  try
+    LogDosyasi := ExtractFilePath(ParamStr(0)) + 'OctailyServer.log';
+    try
+      TFile.AppendAllText(LogDosyasi, FormatDateTime('yyyy-mm-dd hh:nn:ss', Now) + ' - ' + Mesaj + sLineBreak);
+    except
+    end;
+  finally
+    System.TMonitor.Exit(Self); // İşi bitince kapıyı aç
+  end;
+end;
+
+// 2. VERSİYON: Memo1.Lines (TStrings) toplu dökümü için
+procedure TForm1.LogYaz(Satirlar: TStrings);
+var
+  LogDosyasi, TarihDamgasi, LogIcerik: string;
+  I: Integer;
+begin
+  if Satirlar.Count = 0 then
+    Exit; // Boşsa hiç dosyayı yorma
+
+  LogDosyasi := ExtractFilePath(ParamStr(0)) + 'OctailyServer.log';
+  TarihDamgasi := FormatDateTime('yyyy-mm-dd hh:nn:ss', Now) + ' - ';
+  LogIcerik := '';
+
+  // Memo'daki her satırın başına tarih/saat damgası vurup tek bir pakette topluyoruz
+  for I := 0 to Satirlar.Count - 1 do
+  begin
+    LogIcerik := LogIcerik + TarihDamgasi + Satirlar[I] + sLineBreak;
+  end;
+
+  try
+    // Tüm paketi tek seferde dosyaya yazıyoruz (Disk I/O performansı için en iyisi)
+    TFile.AppendAllText(LogDosyasi, LogIcerik);
+  except
+  end;
+end;
 
 {$R *.dfm}
 
@@ -87,10 +139,11 @@ begin
       TThread.Synchronize(nil,
         procedure
         begin
-          Memo1.Lines.Add('Octaily API Sunucusu Başladı!');
+          Memo1.Lines.Add('Octaily API Sunucusu Başladı! #######');
           Memo1.Lines.Add('9000 portundan dinleniyor.');
           Memo1.Lines.Add('Test için tarayıcıda şunu açın:');
           Memo1.Lines.Add('http://localhost:9000/api/game/wordle_tr');
+          LogYaz(Memo1.Lines);
           btnStartServer.Enabled := False; // Yanlışlıkla tekrar basılmasın
         end);
     end);
@@ -98,7 +151,8 @@ end;
 
 procedure TForm1.Button1Click(Sender: TObject);
 begin
-  Memo1.Lines.Add('=== Bugünün Cevapları ===');
+  Memo1.Lines.Add('');
+  Memo1.Lines.Add('=== Bugünün Cevapları === (' + DateToStr(Now) + ')');
 
   Memo1.Lines.Add('Wordle TR Cevabı: ' + TOctailyManager.Instance.GetAnswer
     ('wordle_tr'));
@@ -130,12 +184,42 @@ begin
   Memo1.Lines.Add('Worldle Cevabı: ' + TOctailyManager.Instance.GetAnswer
     ('worldle'));
   Memo1.Lines.Add('------------------');
-
 end;
 
 procedure TForm1.Button2Click(Sender: TObject);
 begin
- Halt;
+  Halt;
+end;
+
+procedure TForm1.FormCreate(Sender: TObject);
+begin
+  Memo1.Clear;
+  btnStartServerClick(Self);
+  Button1Click(Self);
+end;
+
+procedure TForm1.MenuItemCikisClick(Sender: TObject);
+begin
+  Button2Click(Self);
+end;
+
+procedure TForm1.MenuItemGosterGizleClick(Sender: TObject);
+begin
+  if Form1.Visible then
+  begin
+    Form1.Hide;
+    MenuItemGosterGizle.Caption := 'Konsolu Göster';
+  end
+  else
+  begin
+    Form1.Show;
+    MenuItemGosterGizle.Caption := 'Konsolu Gizle';
+  end;
+end;
+
+procedure TForm1.TrayIcon1DblClick(Sender: TObject);
+begin
+  MenuItemGosterGizleClick(Self);
 end;
 
 end.
