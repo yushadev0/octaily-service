@@ -68,7 +68,7 @@ Fetches the initial data (Grid, target info, etc.) of the specified game for the
 ### 2. Submit and Check Guess
 Sends the user's guess to the game engine and returns the calculated result (distance, colors, accuracy, etc.).
 
-**Request:** `GET /api/game/{game_name}`
+**Request:** `GET /api/guess/{game_name}`
 **Body:** `Guess data (String or JSON Array)`
 
 **Example:** `POST http://localhost:9000/api/guess/wordle_tr (Body: "KALEM")`
