@@ -88,7 +88,7 @@ Sends the user's guess to the game engine and returns the calculated result (dis
 **Body:** `Guess data (String or JSON Array)`
 
 **Example:** `POST http://localhost:9000/api/guess/wordle_tr (Body: "KALEM")`
-**Response:**
+<br>**Response:**
 ```json
 {
   "success": true,
