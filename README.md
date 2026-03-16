@@ -41,13 +41,14 @@ Running the project on your local machine is straightforward. It requires no ext
 
 Octaily is designed to run autonomously on Windows Server via Task Scheduler, requiring no active user session (Session 0 Isolation).
 
-1. Open **Task Scheduler** and select **Create Task**.
-2. **General:** Check `Run whether user is logged on or not` and `Run with highest privileges`.
-3. **Triggers:** Add a new trigger -> `At startup`.
-4. **Actions:** Select `Start a program`. Browse to your compiled `OctailyService.exe`. 
-   * *Critical:* You must fill the `Start in (optional)` field with the folder path containing the `.exe` (e.g., `C:\Octaily\Server\`) to allow dynamic path resolution for the `data/` folder.
-5. **Firewall:** Open Windows Defender Firewall -> Inbound Rules -> New Rule -> Port -> Allow TCP Port `9000`.
-6. **Logging:** The service will run invisibly and output all daily generation events, resets, and errors to an `OctailyServer.log` file in its root directory.
+1. **Prepare the Directory:** Ensure that the `data/` folder (containing all your dictionary `.txt` files) is physically copied to the server and placed in the exact same directory as your compiled `OctailyService.exe`.
+2. Open **Task Scheduler** and select **Create Task**.
+3. **General:** Check `Run whether user is logged on or not` and `Run with highest privileges`.
+4. **Triggers:** Add a new trigger -> `At startup`.
+5. **Actions:** Select `Start a program`. Browse to your compiled `OctailyService.exe`. 
+   * *Critical:* You must fill the `Start in (optional)` field with the folder path containing the `.exe` (e.g., `C:\Octaily\Server\`) to allow the engine to dynamically locate the `data/` folder.
+6. **Firewall:** Open Windows Defender Firewall -> Inbound Rules -> New Rule -> Port -> Allow TCP Port `9000`.
+7. **Logging:** The service will run invisibly and output all daily generation events, resets, and errors to an `OctailyServer.log` file in its root directory.
 
 ---
 
