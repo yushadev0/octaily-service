@@ -12,6 +12,7 @@ type
     Name: string;
     NameTR: string; // Normalize edilmiş Türkçe isim
     OriginalName: string; // Orijinal isim (Gerektiğinde göstermek için)
+    OriginalNameTR: string;
     Lat, Lon: Double;
     ISO: string;
   end;
@@ -104,9 +105,15 @@ begin
 
         // JSON'da name_tr alanı olmayan bir ülke gelirse sistem çökmesin diye TryGetValue kullandık
         if LJSONItem.TryGetValue<string>('name_tr', LTempTR) then
-          C.NameTR := NormalizeString(LTempTR)
+        begin
+          C.NameTR := NormalizeString(LTempTR);
+          C.OriginalNameTR := LTempTR;
+        end
         else
-          C.NameTR := ''; // Eğer yoksa boş bırak
+        begin
+          C.NameTR := '';
+          C.OriginalNameTR := '';
+        end;
 
         LLatLng := LJSONItem.GetValue<TJSONArray>('latlng');
         if (LLatLng <> nil) and (LLatLng.Count >= 2) then
@@ -207,7 +214,7 @@ begin
   begin
     CItem := TJSONObject.Create;
     CItem.AddPair('en', C.OriginalName);
-    CItem.AddPair('tr', C.NameTR); // Türkçe ismi de ekle
+    CItem.AddPair('tr', C.OriginalNameTR); // Türkçe ismi de ekle
     CountryArr.AddElement(CItem);
   end;
   Result.AddPair('countries', CountryArr);
