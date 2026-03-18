@@ -103,7 +103,7 @@ Sends the user's guess to the game engine and returns the calculated result (dis
   ]
 }
 ```
-### 3. Fetch Daily Answer (Server-to-Server Protected)
+### 3. Fetch Daily Answer 
 Retrieves the exact daily solution for a specified game. To prevent cheating and unauthorized access, this endpoint dynamically verifies the user's status in the database. The API will only return the correct answer if the specified `user_id` has a completed game record for the current day. This works with `daily_scores` table. 
 
 **Request:** `GET /api/fetch_answer/{game_name}/{user_id}`
