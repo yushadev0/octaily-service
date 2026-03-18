@@ -8,7 +8,8 @@ uses
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
   System.JSON, Horse, uOctailyManager, System.Net.HttpClient,
   System.Net.URLClient, System.Net.HttpClientComponent, Horse.CORS,
-  uWordleGenerator, Vcl.Menus, Vcl.ExtCtrls, IOUtils;
+  uWordleGenerator, Vcl.Menus, Vcl.ExtCtrls, IOUtils, Data.DB, MemDS, DBAccess,
+  Uni, UniProvider, SQLServerUniProvider, SecretConsts;
 
 type
   TForm1 = class(TForm)
@@ -19,7 +20,10 @@ type
     TrayIcon1: TTrayIcon;
     PopupMenu1: TPopupMenu;
     MenuItemGosterGizle: TMenuItem;
-    MenuItemCikis: TMenuItem; // İstekleri veya durumu loglamak istersen
+    MenuItemCikis: TMenuItem;
+    UniConnection1: TUniConnection;
+    Qry: TUniQuery;
+    SQLServerUniProvider1: TSQLServerUniProvider;
     procedure btnStartServerClick(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure Button2Click(Sender: TObject);
@@ -44,7 +48,7 @@ procedure TForm1.LogYaz(Mesaj: string);
 var
   LogDosyasi: string;
 begin
-  System.TMonitor.Enter(Self); // Dosyaya yazarken kapıyı kilitle
+  System.TMonitor.Enter(Self);
   try
     LogDosyasi := ExtractFilePath(ParamStr(0)) + 'OctailyServer.log';
     try
@@ -52,31 +56,28 @@ begin
     except
     end;
   finally
-    System.TMonitor.Exit(Self); // İşi bitince kapıyı aç
+    System.TMonitor.Exit(Self);
   end;
 end;
 
-// 2. VERSİYON: Memo1.Lines (TStrings) toplu dökümü için
 procedure TForm1.LogYaz(Satirlar: TStrings);
 var
   LogDosyasi, TarihDamgasi, LogIcerik: string;
   I: Integer;
 begin
   if Satirlar.Count = 0 then
-    Exit; // Boşsa hiç dosyayı yorma
+    Exit;
 
   LogDosyasi := ExtractFilePath(ParamStr(0)) + 'OctailyServer.log';
   TarihDamgasi := FormatDateTime('yyyy-mm-dd hh:nn:ss', Now) + ' - ';
   LogIcerik := '';
 
-  // Memo'daki her satırın başına tarih/saat damgası vurup tek bir pakette topluyoruz
   for I := 0 to Satirlar.Count - 1 do
   begin
     LogIcerik := LogIcerik + TarihDamgasi + Satirlar[I] + sLineBreak;
   end;
 
   try
-    // Tüm paketi tek seferde dosyaya yazıyoruz (Disk I/O performansı için en iyisi)
     TFile.AppendAllText(LogDosyasi, LogIcerik);
   except
   end;
@@ -86,23 +87,22 @@ end;
 
 procedure TForm1.btnStartServerClick(Sender: TObject);
 begin
-  // Eğer sunucu zaten çalışıyorsa tekrar başlatmayı engelle
   if THorse.IsRunning then
   begin
     ShowMessage('Sunucu zaten çalışıyor!');
     Exit;
   end;
+
   THorse.Use(CORS);
+
   // --- ROUTE 1: GÜNLÜK BULMACAYI GETİR ---
-  // Tarayıcıdan veya mobilden oyun istendiğinde bu blok çalışır
   THorse.Get('/api/game/:name',
     procedure(Req: THorseRequest; Res: THorseResponse)
     var
       GameName: string;
       JSONResponse: TJSONObject;
     begin
-      GameName := Req.Params['name']; // URL'den oyun adını al
-
+      GameName := Req.Params['name'];
       JSONResponse := TOctailyManager.Instance.GetPuzzle(GameName);
       try
         Res.Send(JSONResponse.ToJSON).ContentType('application/json');
@@ -112,7 +112,6 @@ begin
     end);
 
   // --- ROUTE 2: TAHMİN GÖNDER VE KONTROL ET ---
-  // Kullanıcı kelime, koordinat veya JSON gönderdiğinde bu blok çalışır
   THorse.Post('/api/guess/:name',
     procedure(Req: THorseRequest; Res: THorseResponse)
     var
@@ -120,7 +119,7 @@ begin
       JSONResponse: TJSONObject;
     begin
       GameName := Req.Params['name'];
-      GuessData := Req.Body; // Gönderilen veriyi al
+      GuessData := Req.Body;
 
       JSONResponse := TOctailyManager.Instance.PostGuess(GameName, GuessData);
       try
@@ -130,21 +129,69 @@ begin
       end;
     end);
 
+  // --- ROUTE 3: (YENİ) GÜNLÜK CEVABI GETİR (GÜVENLİ VE THREAD-SAFE) ---
+  THorse.Get('/api/fetch_answer/:name/:uid',
+    procedure(Req: THorseRequest; Res: THorseResponse)
+    var
+      GameName: string;
+      UserID: Integer;
+      JSONResponse: TJSONObject;
+      HasPlayedToday: Boolean;
+      LQuery: TUniQuery;
+    begin
+      GameName := Req.Params['name'];
+      UserID := StrToIntDef(Req.Params['uid'], 0);
+      HasPlayedToday := False;
+
+      System.TMonitor.Enter(Form1.UniConnection1);
+      try
+        LQuery := TUniQuery.Create(nil);
+        try
+          LQuery.Connection := Form1.UniConnection1;
+          // SİHİRLİ DOKUNUŞ: GETDATE() DEĞİL NOW KULLANIYORUZ Kİ SAAT DİLİMİ (TIMEZONE) ŞAŞMASIN!
+         LQuery.SQL.Text := 'SELECT 1 FROM daily_scores WHERE user_id = :uid AND game_type = :gt AND CAST(puzzle_date AS DATE) = CAST(GETDATE() AS DATE)';
+          LQuery.ParamByName('uid').AsInteger := UserID;
+          LQuery.ParamByName('gt').AsString := GameName;
+          //LQuery.ParamByName('td').AsDateTime := Now;
+          LQuery.Open;
+          HasPlayedToday := not LQuery.IsEmpty;
+        finally
+          LQuery.Free;
+        end;
+      finally
+        System.TMonitor.Exit(Form1.UniConnection1);
+      end;
+
+      JSONResponse := TJSONObject.Create;
+      try
+        if HasPlayedToday then
+        begin
+          JSONResponse.AddPair('success', TJSONBool.Create(True));
+          JSONResponse.AddPair('answer', TOctailyManager.Instance.GetAnswer(GameName));
+        end
+        else
+        begin
+          JSONResponse.AddPair('success', TJSONBool.Create(False));
+          JSONResponse.AddPair('error', '');
+        end;
+
+        Res.Send(JSONResponse.ToJSON).ContentType('application/json');
+      finally
+        JSONResponse.Free;
+      end;
+    end);
+
   // --- SUNUCUYU AYAĞA KALDIR ---
-  // 9000 portundan dinlemeye başlıyoruz
   THorse.Listen(9000,
     procedure
     begin
-      // Bu kısım sunucu başarıyla başladığında tetiklenir
       TThread.Synchronize(nil,
         procedure
         begin
           Memo1.Lines.Add('Octaily API Sunucusu Başladı! #######');
           Memo1.Lines.Add('9000 portundan dinleniyor.');
-          Memo1.Lines.Add('Test için tarayıcıda şunu açın:');
-          Memo1.Lines.Add('http://localhost:9000/api/game/wordle_tr');
           LogYaz(Memo1.Lines);
-          btnStartServer.Enabled := False; // Yanlışlıkla tekrar basılmasın
+          btnStartServer.Enabled := False;
         end);
     end);
 end;
@@ -153,36 +200,21 @@ procedure TForm1.Button1Click(Sender: TObject);
 begin
   Memo1.Lines.Add('');
   Memo1.Lines.Add('=== Bugünün Cevapları === (' + DateToStr(Now) + ')');
-
-  Memo1.Lines.Add('Wordle TR Cevabı: ' + TOctailyManager.Instance.GetAnswer
-    ('wordle_tr'));
+  Memo1.Lines.Add('Wordle TR Cevabı: ' + TOctailyManager.Instance.GetAnswer('wordle_tr'));
   Memo1.Lines.Add('------------------');
-
-  Memo1.Lines.Add('Wordle EN Cevabı: ' + TOctailyManager.Instance.GetAnswer
-    ('wordle_en'));
+  Memo1.Lines.Add('Wordle EN Cevabı: ' + TOctailyManager.Instance.GetAnswer('wordle_en'));
   Memo1.Lines.Add('------------------');
-
-  Memo1.Lines.Add('Sudoku Cevabı: ' + TOctailyManager.Instance.GetAnswer
-    ('sudoku'));
+  Memo1.Lines.Add('Sudoku Cevabı: ' + TOctailyManager.Instance.GetAnswer('sudoku'));
   Memo1.Lines.Add('------------------');
-
-  Memo1.Lines.Add('Queens Cevabı: ' + TOctailyManager.Instance.GetAnswer
-    ('queens'));
+  Memo1.Lines.Add('Queens Cevabı: ' + TOctailyManager.Instance.GetAnswer('queens'));
   Memo1.Lines.Add('------------------');
-
-  Memo1.Lines.Add('Nerdle Cevabı: ' + TOctailyManager.Instance.GetAnswer
-    ('nerdle'));
+  Memo1.Lines.Add('Nerdle Cevabı: ' + TOctailyManager.Instance.GetAnswer('nerdle'));
   Memo1.Lines.Add('------------------');
-
   Memo1.Lines.Add('Zip Cevabı: ' + TOctailyManager.Instance.GetAnswer('zip'));
   Memo1.Lines.Add('------------------');
-
-  Memo1.Lines.Add('Hexle Cevabı: ' + TOctailyManager.Instance.GetAnswer
-    ('hexle'));
+  Memo1.Lines.Add('Hexle Cevabı: ' + TOctailyManager.Instance.GetAnswer('hexle'));
   Memo1.Lines.Add('------------------');
-
-  Memo1.Lines.Add('Worldle Cevabı: ' + TOctailyManager.Instance.GetAnswer
-    ('worldle'));
+  Memo1.Lines.Add('Worldle Cevabı: ' + TOctailyManager.Instance.GetAnswer('worldle'));
   Memo1.Lines.Add('------------------');
 end;
 
@@ -196,6 +228,10 @@ begin
   Memo1.Clear;
   btnStartServerClick(Self);
   Button1Click(Self);
+
+  UniConnection1.Username := DB_USERNAME;
+  UniConnection1.Password := DB_PASS;
+  UniConnection1.Connect;
 end;
 
 procedure TForm1.MenuItemCikisClick(Sender: TObject);

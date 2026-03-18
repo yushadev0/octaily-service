@@ -191,12 +191,12 @@ object Form1: TForm1
     PopupMenu = PopupMenu1
     Visible = True
     OnDblClick = TrayIcon1DblClick
-    Left = 568
-    Top = 120
+    Left = 576
+    Top = 232
   end
   object PopupMenu1: TPopupMenu
-    Left = 568
-    Top = 176
+    Left = 576
+    Top = 288
     object MenuItemGosterGizle: TMenuItem
       Caption = 'Konsolu  G'#246'ster'
       OnClick = MenuItemGosterGizleClick
@@ -205,5 +205,22 @@ object Form1: TForm1
       Caption = 'Sunucuyu Durdur (Kapat)'
       OnClick = MenuItemCikisClick
     end
+  end
+  object UniConnection1: TUniConnection
+    ProviderName = 'SQL Server'
+    Database = 'octaily'
+    Server = '167.86.118.127\MSSQL2017'
+    LoginPrompt = False
+    Left = 512
+    Top = 72
+  end
+  object Qry: TUniQuery
+    Connection = UniConnection1
+    Left = 584
+    Top = 128
+  end
+  object SQLServerUniProvider1: TSQLServerUniProvider
+    Left = 552
+    Top = 72
   end
 end

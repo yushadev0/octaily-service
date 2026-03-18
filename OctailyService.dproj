@@ -139,6 +139,7 @@
         <DCCReference Include="generators\uWorldleGenerator.pas"/>
         <DCCReference Include="generators\uSudokuGenerator.pas"/>
         <DCCReference Include="uOctailyManager.pas"/>
+        <DCCReference Include="SecretConsts.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
