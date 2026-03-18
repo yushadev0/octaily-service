@@ -1,6 +1,6 @@
 # Octaily API Service
 
-![Delphi](https://img.shields.io/badge/Delphi-12.3-red.svg)
+![Delphi](https://img.shields.io/badge/Delphi-10.4+-red.svg)
 ![Horse](https://img.shields.io/badge/Framework-Horse-blue.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 ![Status](https://img.shields.io/badge/Status-Active-brightgreen.svg)
@@ -118,11 +118,11 @@ Retrieves the exact daily solution for a specified game. To prevent cheating and
 }
 ```
 
-**Response: (if user not played the game)**
+**Response: (if user not played the game)** 
 ```json
 {
   "success": false,
-  "error": ""
+  "error": "Kullanıcı oyunu oynamadı."
 }
 ```
 
